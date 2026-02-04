@@ -1,137 +1,261 @@
-# Ejercicio: Anatomía de las Colas Largas (Sintético)
+# Ejercicio: Diagnóstico de Fat Tails (Metodología Taleb)
 
 ## Objetivo
 
-Experimentar con distribuciones fat-tailed en un entorno controlado para entender visceralmente:
-- Por qué el promedio converge (o no)
-- El efecto devastador de una sola observación extrema
-- El criterio κ de Taleb
-- Por qué Mediocristán ≠ Extremistán
+Aprender la **metodología completa** para:
+1. **Detectar** si unos datos tienen fat tails
+2. **Estimar** el índice de cola α
+3. **Decidir** qué hacer según el resultado
 
-## Contexto Teórico
-
-### Los Tres Regímenes
-
-Para distribuciones de ley de potencias con exponente α:
-
-| Régimen | Media | Varianza | LGN | TLC | Comportamiento |
-|---------|-------|----------|-----|-----|----------------|
-| α > 2 | ✓ Finita | ✓ Finita | ✓ Funciona | ✓ Funciona | "Normal" |
-| 1 < α ≤ 2 | ✓ Finita | ✗ Infinita | ⚠️ Muy lento | ✗ Falla | Fat-tailed |
-| α ≤ 1 | ✗ Infinita | ✗ Infinita | ✗ Falla | ✗ Falla | Extremo |
-
-### Distribución de Pareto
-
-$$P(X > x) = \left(\frac{x_m}{x}\right)^\alpha \quad \text{para } x \geq x_m$$
-
-- Si α = 3: media = 1.5, varianza finita
-- Si α = 2: media = 2, varianza infinita
-- Si α = 1.5: media = 3, varianza infinita
-- Si α = 1: media infinita (Zipf)
-
-### Distribución de Cauchy
-
-Caso extremo donde **ni la media existe**. El promedio de n variables Cauchy es... Cauchy.
+Usaremos distribuciones sintéticas donde **conocemos la respuesta** para validar los métodos.
 
 ---
 
-## Lo Que Harás
+## El Problema con Student-t
 
-### Parte A: El Experimento de Convergencia
+⚠️ **ADVERTENCIA IMPORTANTE:**
 
-**Pregunta:** ¿Cuántas observaciones necesitas para que el promedio se estabilice?
+Student-t es una **trampa** como modelo de fat tails:
+- Student-t(ν) tiene los mismos momentos finitos que Pareto(α=ν) para k < ν
+- PERO la cola de Student-t decae como $t^{-\nu-1}$, no como $x^{-\alpha}$
+- Esto significa que Student-t **subestima** los eventos extremos reales
+- Usar Student-t da una **falsa sensación de seguridad**
 
-1. Simular 30 trayectorias del promedio acumulado para:
-   - Normal(0, 1)
-   - Pareto(α=3)
-   - Pareto(α=2)
-   - Pareto(α=1.5)
+---
 
-2. Para cada una, medir:
-   - ¿A qué n el 90% de trayectorias están dentro del ±10% de la media teórica?
-   - ¿Qué tan "suaves" vs "erráticas" son las trayectorias?
+## Metodología de Detección: Paso a Paso
 
-3. Llenar la tabla:
+### PASO 1: Visualización Inicial
+
+Antes de calcular nada, siempre visualiza:
+
+#### 1.1 Log-Log Survival Plot
+
+```python
+sorted_data = np.sort(np.abs(data))[::-1]
+survival = np.arange(1, len(sorted_data)+1) / len(sorted_data)
+plt.loglog(sorted_data, survival)
+```
+
+**¿Qué buscar?**
+- **Línea recta** → Power law → Fat tails con α = -pendiente
+- **Curva hacia abajo** → Decaimiento más rápido → Thin tails
+
+#### 1.2 Mean Excess Function
+
+$e(u) = E[X - u | X > u]$
+
+**¿Qué buscar?**
+- **Constante** → Exponencial (thin)
+- **Creciente** → Fat tails
+- **Decreciente** → Thin tails truncadas
+
+#### 1.3 QQ-Plot vs Normal
+
+```python
+scipy.stats.probplot(data, dist="norm", plot=plt)
+```
+
+**¿Qué buscar?**
+- **Línea recta** → Datos normales
+- **Curvatura en los extremos** → Colas más pesadas
+
+---
+
+### PASO 2: Estimación Cuantitativa
+
+#### 2.1 Estimador de Hill para α
+
+```python
+def hill_estimator(data, k=None):
+    sorted_data = np.sort(np.abs(data))[::-1]
+    if k is None:
+        k = int(np.sqrt(len(data)))
+    log_ratios = np.log(sorted_data[:k] / sorted_data[k])
+    return k / np.sum(log_ratios)
+```
+
+**Importante:** Graficar α̂ vs k para ver estabilidad.
+
+#### 2.2 Kappa de Taleb
+
+```python
+def kappa_taleb(data):
+    return np.max(np.abs(data)) / np.sum(np.abs(data))
+```
+
+**Regla:** Si κ no decrece significativamente con n → fat tails.
+
+---
+
+### PASO 3: Interpretación
+
+| α̂ estimado | Diagnóstico | Qué momentos existen |
+|-------------|-------------|---------------------|
+| > 4 | Casi thin-tailed | Media, Var, Kurtosis ✓ |
+| 3-4 | Fat-tailed leve | Media, Var ✓, Kurtosis ∞ |
+| 2-3 | Fat-tailed moderado | Media, Var ✓, Kurtosis ∞ |
+| 1-2 | Fat-tailed severo | Media ✓, **Var ∞** |
+| < 1 | Extremo | **Media ∞**, Var ∞ |
+
+---
+
+### PASO 4: ¿Qué Hacer?
+
+#### Si α > 4 (Casi normal):
+- Métodos clásicos funcionan razonablemente
+- IC normales son aproximadamente válidos
+- Pero siempre verificar con bootstrap
+
+#### Si 2 < α ≤ 4 (Fat-tailed con varianza finita):
+- **Media:** Usar mediana en lugar de promedio
+- **Dispersión:** Usar MAD en lugar de desviación estándar
+- **IC:** Usar bootstrap, no IC normales
+- **Riesgo:** Usar Expected Shortfall, no VaR paramétrico
+
+#### Si α ≤ 2 (Varianza infinita):
+- ⚠️ **ALARMA** ⚠️
+- El promedio muestral es completamente inestable
+- La varianza muestral no tiene sentido
+- Usar **solo cuantiles** (mediana, percentiles)
+- Considerar si el modelo tiene sentido
+
+#### Si α ≤ 1 (Media infinita):
+- 🚨 **EMERGENCIA** 🚨
+- Ni siquiera la LGN funciona
+- El promedio literalmente no existe
+- Ejemplo: Cauchy
+- Repensar completamente el problema
+
+---
+
+## El Experimento
+
+### Distribuciones de Prueba
+
+El script genera 8 distribuciones con diferentes propiedades:
+
+| Distribución | α real | Tipo | ¿Qué testea? |
+|--------------|--------|------|--------------|
+| Normal | ∞ | Thin | Caso base |
+| Exponencial | ∞ | Thin | Colas exponenciales |
+| Lognormal | ∞ | Sub-exponencial | Colas pesadas pero momentos finitos |
+| Pareto(α=3) | 3 | Fat | Kurtosis infinita |
+| Pareto(α=2) | 2 | Fat | Varianza infinita |
+| Pareto(α=1.5) | 1.5 | Fat | Varianza muy infinita |
+| Cauchy | 1 | Fat | Media infinita |
+| Student-t(ν=4) | 4 | **Pseudo-fat** | ¡La trampa! |
+
+### Lo Que Harás
+
+#### Parte A: Aplicar Diagnósticos
+
+Para cada distribución:
+1. Examinar el log-log survival plot
+2. Calcular α̂ con Hill
+3. Calcular κ de Taleb
+4. Comparar α̂ con α real
+
+**Llenar tabla:**
+
+| Distribución | α real | α̂ (Hill) | κ | Diagnóstico correcto? |
+|--------------|--------|-----------|---|----------------------|
+| Normal | ∞ | ? | ? | ? |
+| Pareto(α=3) | 3 | ? | ? | ? |
+| ... | ... | ... | ... | ... |
+
+#### Parte B: Convergencia del Promedio
+
+Observar cómo converge (o no) el promedio para cada distribución:
+
+- Normal: Converge rápido y limpio
+- Pareto α=3: Converge pero con volatilidad
+- Pareto α=1.5: Converge muy lento con saltos
+- Cauchy: NO CONVERGE
+
+**Pregunta:** ¿Cuántas observaciones necesitas para convergencia al 10%?
 
 | Distribución | n para convergencia 10% |
 |--------------|-------------------------|
-| Normal | ~? |
-| Pareto α=3 | ~? |
-| Pareto α=2 | ~? |
-| Pareto α=1.5 | ~? |
+| Normal | ~100 |
+| Pareto α=3 | ~1,000 |
+| Pareto α=2 | ~10,000+ |
+| Pareto α=1.5 | >100,000 |
+| Cauchy | **Nunca** |
 
-### Parte B: El Experimento "Un Cisne Negro"
+#### Parte C: Impacto del Cisne Negro
 
-**Pregunta:** ¿Cuánto puede cambiar el promedio al añadir UNA observación?
+El script muestra cómo UNA observación extrema afecta la media:
 
-1. Generar 1000 observaciones de cada distribución
-2. Calcular: media, mediana, desviación estándar
-3. Añadir UNA observación del cuantil 99.9%
-4. Recalcular las estadísticas
-5. Medir el cambio porcentual
+| Distribución | Cambio en media por 1 cisne negro |
+|--------------|-----------------------------------|
+| Normal | ~1% |
+| Pareto α=2 | ~10-20% |
+| Cauchy | Puede ser >100% |
 
-| Distribución | Cambio en media | Cambio en mediana | Cambio en σ |
-|--------------|-----------------|-------------------|-------------|
-| Normal | ?% | ?% | ?% |
-| Pareto α=1.5 | ?% | ?% | ?% |
+#### Parte D: La Trampa de Student-t
 
-**Lección esperada:** La mediana es robusta, la media no.
-
-### Parte C: El Criterio κ de Taleb
-
-**Pregunta:** ¿Qué fracción del total aporta la observación más grande?
-
-$$\kappa = \frac{\max(X_1, \ldots, X_n)}{\sum_{i=1}^n X_i}$$
-
-1. Calcular κ para muestras de tamaño n = 100, 500, 1000, 5000
-2. Repetir 500 veces para cada n
-3. Graficar la distribución de κ
-
-**Interpretación:**
-- κ → 0: ninguna observación domina (thin-tailed)
-- κ permanece alto: "winner takes all" (fat-tailed)
-
-### Parte D: Curva de Concentración (Lorenz)
-
-**Pregunta:** ¿Qué porcentaje del total aporta el top X%?
-
-1. Generar 10,000 observaciones
-2. Ordenar de mayor a menor
-3. Calcular: ¿cuánto aporta el top 1%? ¿Top 10%? ¿Top 20%?
-
-| Distribución | Top 1% | Top 10% | Top 20% |
-|--------------|--------|---------|---------|
-| Normal | ?% | ?% | ?% |
-| Pareto α=2 | ?% | ?% | ?% |
-| Pareto α=1.5 | ?% | ?% | ?% |
-
-**Lección esperada:** En fat tails, "el 20% tiene el 80%" (o peor).
+Comparar Student-t(ν=4) con Pareto(α=4):
+- Ambos tienen α=4
+- PERO Student-t tiene colas que decaen más rápido
+- Usar Student-t para modelar fat tails = **subestimar riesgo**
 
 ---
 
 ## Preguntas de Reflexión
 
-1. **¿Por qué la mediana es más robusta que la media?** ¿En qué situaciones preferirías usar mediana?
+1. **¿Por qué el estimador de Hill solo usa las k observaciones más extremas?** ¿Qué pasa si usas todas?
 
-2. **Si κ permanece alto sin importar n, ¿qué implica para el muestreo?** ¿Puedes "promediar" el riesgo away?
+2. **Si α̂ = 2.5, ¿puedes confiar en la varianza muestral?** ¿Por qué sí o por qué no?
 
-3. **Piensa en la distribución de riqueza.** Si la riqueza es Pareto con α ≈ 1.5, ¿qué porcentaje del total tiene el 1% más rico?
+3. **¿Por qué κ es mejor que α̂ para detectar fat tails en la práctica?**
 
-4. **Piensa en el éxito de productos/apps.** Si las descargas siguen ley de potencias, ¿tiene sentido hablar del "app promedio"?
+4. **¿Cómo explicarías a alguien sin matemáticas que "la varianza es infinita"?**
 
-5. **¿Por qué es peligroso usar la media cuando sospechas fat tails?** Da un ejemplo concreto.
+5. **Si te dan datos de un fenómeno desconocido, ¿cuál es tu primer diagnóstico?**
+
+6. **¿Por qué Student-t es una trampa?** ¿Qué usarías en su lugar?
 
 ---
 
-## Extensiones Sugeridas
+## Adaptaciones Concretas
 
-1. **Explorar otros valores de α:** ¿Qué pasa en la "frontera" α = 2?
+### Código para Datos Fat-Tailed
 
-2. **Simular Cauchy:** Ver que el promedio de Cauchy es Cauchy (no converge nunca)
+```python
+import numpy as np
+from scipy.stats import median_abs_deviation, bootstrap
 
-3. **Mezclas de distribuciones:** ¿Qué pasa si el 99% de los datos son normales pero el 1% son fat-tailed?
+# === TENDENCIA CENTRAL ===
+# MAL (si α < 4):
+media = np.mean(data)
 
-4. **Comparar con datos reales:** ¿Los retornos del S&P 500 se parecen más a Normal o a Pareto?
+# BIEN:
+mediana = np.median(data)
+
+# === DISPERSIÓN ===
+# MAL (si α < 4):
+std = np.std(data)
+
+# BIEN:
+mad = median_abs_deviation(data)
+
+# === INTERVALOS DE CONFIANZA ===
+# MAL:
+ic = (media - 1.96*std, media + 1.96*std)
+
+# BIEN:
+result = bootstrap((data,), np.median, confidence_level=0.95)
+ic = result.confidence_interval
+
+# === RIESGO ===
+# MAL:
+VaR_99 = media - 2.33 * std  # Paramétrico normal
+
+# BIEN:
+VaR_99 = np.percentile(data, 1)  # Histórico
+ES_99 = data[data < VaR_99].mean()  # Expected Shortfall
+```
 
 ---
 
@@ -139,18 +263,20 @@ $$\kappa = \frac{\max(X_1, \ldots, X_n)}{\sum_{i=1}^n X_i}$$
 
 ```bash
 cd clase/05_probabilidad/ejercicios
+source .venv/bin/activate
 python ejercicio_sintetico.py
 ```
 
 El script generará:
-- Gráficas de convergencia para cada distribución
-- Análisis del impacto de un cisne negro
-- Histogramas de κ
-- Curvas de Lorenz
-- Todas guardadas en `outputs/`
+- `diagnosticos_fattails.png`: Panel completo de diagnósticos para cada distribución
+- `convergencia_fattails.png`: Cómo converge (o no) el promedio
+- `cisne_negro_impacto.png`: Impacto de una observación extrema
+- `student_t_trampa.png`: Por qué Student-t no es suficiente
 
 ---
 
-## Nota
+## Referencia
 
-Este ejercicio complementa el laboratorio principal (`../lab_probabilidad.py`) que genera las imágenes para las notas de clase. Aquí el enfoque es más interactivo: tú modificas parámetros y observas los efectos.
+- Taleb, N.N. (2020). *Statistical Consequences of Fat Tails*. STEM Academic Press.
+- Capítulo 3: "How to recognize fat tails"
+- Capítulo 4: "The Hill estimator"

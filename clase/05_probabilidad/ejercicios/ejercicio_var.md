@@ -2,33 +2,29 @@
 
 ## Objetivo
 
-Demostrar por qué el VaR (Value at Risk) —la medida de riesgo más usada en finanzas— falla sistemáticamente cuando los retornos tienen colas pesadas.
+1. Demostrar **empíricamente** por qué el VaR paramétrico falla
+2. Aprender a **diagnosticar** fat tails en datos financieros
+3. Implementar **alternativas robustas** al VaR normal
 
-## Contexto Teórico
+---
 
-### ¿Qué es el VaR?
+## El Problema
 
-El Value at Risk responde la pregunta:
+El VaR (Value at Risk) es LA métrica de riesgo más usada en finanzas. Pero tiene un problema fundamental.
 
-> "¿Cuál es la pérdida máxima que no superaremos en X% de los casos?"
-
-**Definición formal:** VaR al nivel de confianza α es el cuantil (1-α) de la distribución de pérdidas.
+### Definición Formal
 
 $$\text{VaR}\_\alpha = -Q\_{1-\alpha}(\mathcal{R})$$
 
 donde $Q_p$ es el cuantil p de los retornos R.
 
-**Ejemplos:**
-- VaR₉₉ con horizonte de 1 día: "El 99% de los días, no perderemos más que esta cantidad"
-- VaR₉₅ con horizonte de 10 días: "El 95% de las veces en 10 días, no perderemos más que esta cantidad"
+**En palabras:**
+- VaR₉₉ = "El 99% de los días, no perderemos más que esta cantidad"
+- VaR₉₅ = "El 95% de los días, no perderemos más que esta cantidad"
 
-### Cómo se Calcula: Método Paramétrico
+### Cómo se Calcula: Método Paramétrico (Normal)
 
-El método más común asume normalidad:
-
-$$R \sim \mathcal{N}(\mu, \sigma^2)$$
-
-Entonces:
+Asumiendo $R \sim \mathcal{N}(\mu, \sigma^2)$:
 
 $$\text{VaR}\_\alpha = -(\mu + z\_{1-\alpha} \cdot \sigma)$$
 
@@ -36,117 +32,275 @@ donde $z_{1-\alpha}$ es el cuantil de la normal estándar:
 - VaR₉₉: $z_{0.01} = -2.326$
 - VaR₉₅: $z_{0.05} = -1.645$
 
-### El Problema
+### El Problema Fundamental
 
-Si los retornos son fat-tailed (como en realidad son), el VaR paramétrico:
+Si los retornos son **fat-tailed** (α ≈ 3 para acciones):
 
 1. **Subestima la frecuencia** de violaciones
-2. **Subestima la severidad** de las pérdidas cuando hay violación
+2. **Subestima la severidad** de las pérdidas
+3. Da **falsa sensación de seguridad**
 
-### Backtesting del VaR
+---
 
-Para evaluar un modelo de VaR, hacemos "backtesting":
+## ¿Por qué Student-t NO es la Solución?
 
-1. Calculamos VaR para cada día usando datos hasta ese día
-2. Comparamos con el retorno real del día siguiente
-3. Contamos "violaciones" (días donde la pérdida superó el VaR)
+⚠️ **ADVERTENCIA CRÍTICA:**
 
-**Si el modelo es correcto:**
-- VaR₉₉ debería violarse ~1% de los días
-- VaR₉₅ debería violarse ~5% de los días
+| Aspecto | Normal | Student-t | Pareto (real) |
+|---------|--------|-----------|---------------|
+| Colas | Exponencial | $\sim t^{-\nu-1}$ | $\sim x^{-\alpha}$ |
+| Decaimiento | Muy rápido | Rápido | Lento |
+| Eventos extremos | "Imposibles" | Raros | Frecuentes |
+
+**Student-t subestima los eventos extremos porque sus colas decaen más rápido que power law.**
+
+---
+
+## Metodología del Ejercicio
+
+### PASO 1: Diagnóstico de Fat Tails
+
+Antes de calcular VaR, diagnosticar la distribución:
+
+```python
+# 1. Estimar α con Hill
+alpha = hill_estimator(returns)
+
+# 2. Calcular κ de Taleb
+kappa = np.max(np.abs(returns)) / np.sum(np.abs(returns))
+
+# 3. Contar eventos extremos
+for k in [3, 4, 5, 6]:
+    obs = (np.abs(z_scores) > k).sum()
+    esp = len(returns) * 2 * (1 - stats.norm.cdf(k))
+    print(f">{k}σ: obs={obs}, esp={esp:.1f}, ratio={obs/esp:.1f}x")
+```
+
+**Interpretación:**
+- α ≈ 3 para S&P 500 → varianza finita pero kurtosis infinita
+- VaR normal subestima ~50-100x los eventos >4σ
+
+### PASO 2: Calcular VaR con Diferentes Métodos
+
+El script compara 4 métodos:
+
+| Método | Descripción | Asunciones |
+|--------|-------------|------------|
+| **Normal** | $-(\mu + z\sigma)$ | Normalidad |
+| **Histórico** | Percentil empírico | Ninguna |
+| **Cornish-Fisher** | Ajuste por skew y kurt | Momentos finitos |
+| **EVT (GPD)** | Extreme Value Theory | Cola sigue GPD |
+
+```python
+# Normal (paramétrico)
+VaR_normal = -(mu + stats.norm.ppf(0.01) * sigma)
+
+# Histórico (no paramétrico)
+VaR_hist = -np.percentile(returns, 1)
+
+# EVT con GPD (Generalized Pareto)
+# Modela solo la cola, más robusto
+```
+
+### PASO 3: Backtesting
+
+Para cada método, calcular:
+- Tasa de violación (esperada vs real)
+- Severidad de violaciones (cuánto excede el VaR)
+
+```python
+# Una violación = pérdida > VaR predicho
+violacion = -retorno_real > VaR_predicho
+
+# Severidad = qué tan mal falla cuando falla
+severidad = (-retorno_real - VaR_predicho) / VaR_predicho
+```
+
+**Métricas:**
+- VaR₉₉ debería tener ~1% de violaciones
+- Si tiene 2-5%, el modelo subestima riesgo
+
+### PASO 4: Análisis de Eventos Extremos
+
+Identificar los peores días y calcular cuántas "sigmas" representan:
+
+```python
+z_scores = (returns - mu) / sigma
+worst_days = z_scores.nsmallest(20)
+```
+
+**Cita clave:**
+> "We were seeing things that were 25-standard deviation moves, several days in a row."
+> — David Viniar, CFO Goldman Sachs, agosto 2007
+
+Si tu modelo dice 25σ, el problema es tu modelo.
 
 ---
 
 ## Lo Que Harás
 
-### Parte A: Calcular VaR Paramétrico
+### Parte A: Diagnóstico
 
-1. Usar una ventana móvil de N días para estimar μ y σ
-2. Calcular VaR₉₉ y VaR₉₅ para cada día
-3. Comparar con el retorno real del día siguiente
+1. Correr el script y examinar el diagnóstico de colas
+2. Llenar la tabla:
 
-### Parte B: Backtest — Contar Violaciones
+| Métrica | Valor | Interpretación |
+|---------|-------|----------------|
+| α̂ (Hill) | ~? | ¿α > 2? ¿α > 4? |
+| Eventos >4σ obs/esp | ~?x | ¿Cuánto subestima Normal? |
+| Test Jarque-Bera | p < 0.05? | ¿Rechazamos normalidad? |
 
-4. Contar días donde el retorno real < -VaR
-5. Calcular tasa de violación: violaciones / total de días
-6. Comparar con la tasa esperada (1% para VaR₉₉, 5% para VaR₉₅)
+### Parte B: Comparar Métodos de VaR
 
-### Parte C: Severidad de las Violaciones
+Llenar tabla de backtesting:
 
-7. Cuando el VaR falla, ¿por cuánto falla?
-8. Calcular el "Expected Shortfall" empírico:
-   - Promedio de pérdidas en los días que violaron el VaR
-9. Comparar con el VaR (ratio pérdida real / VaR predicho)
+| Método | Violaciones | Tasa | Esperada (1%) | Ratio |
+|--------|-------------|------|---------------|-------|
+| Normal | ? | ?% | 1% | ?x |
+| Histórico | ? | ?% | 1% | ?x |
+| Cornish-Fisher | ? | ?% | 1% | ?x |
+| EVT | ? | ?% | 1% | ?x |
 
-### Parte D: Comparar con Modelo Fat-Tailed
+### Parte C: Severidad
 
-10. Recalcular VaR usando distribución Student-t
-11. Ver si las tasas de violación mejoran
-12. Encontrar los grados de libertad óptimos
+¿Qué método tiene menor severidad promedio cuando falla?
+
+| Método | Severidad promedio |
+|--------|-------------------|
+| Normal | ?% |
+| Histórico | ?% |
+| EVT | ?% |
 
 ---
 
-## Métricas Clave
+## ¿Qué Hacer? Alternativas Robustas
 
-### Tasa de Violación (Coverage)
+### 1. VaR Histórico (Mínimo Viable)
 
-$$\text{Tasa de Violación} = \frac{\text{Número de violaciones}}{\text{Total de días}}$$
+```python
+def var_historico(returns, alpha=0.99):
+    return -np.percentile(returns, (1-alpha)*100)
+```
 
-- VaR₉₉ correcto: tasa ≈ 1%
-- VaR₉₅ correcto: tasa ≈ 5%
+**Pros:** No asume distribución
+**Contras:** Limitado por datos históricos
 
-### Ratio de Severidad
+### 2. VaR con EVT (Más Robusto)
 
-$$\text{Ratio} = \frac{\text{Pérdida real cuando hay violación}}{\text{VaR predicho}}$$
+```python
+from scipy.stats import genpareto
 
-Si el modelo es correcto, este ratio debería estar cerca de 1.
-Si el modelo subestima, el ratio será >> 1.
+def var_evt(returns, alpha=0.99, threshold_pct=90):
+    losses = -returns
+    u = np.percentile(losses, threshold_pct)
+    excesses = losses[losses > u] - u
+    
+    # Ajustar GPD a los excesos
+    params = genpareto.fit(excesses)
+    c, loc, scale = params
+    
+    # Calcular VaR
+    n, n_u = len(losses), len(excesses)
+    Fu = n_u / n
+    p = 1 - alpha
+    
+    var = u + (scale/c) * ((p/Fu)**(-c) - 1)
+    return var
+```
 
-### Expected Shortfall (ES)
+### 3. Expected Shortfall (ES)
 
-$$\text{ES}\_\alpha = E[\text{Pérdida} | \text{Pérdida} > \text{VaR}\_\alpha]$$
+```python
+def expected_shortfall(returns, alpha=0.99):
+    var = var_historico(returns, alpha)
+    return -returns[returns < -var].mean()
+```
 
-"Cuando las cosas van mal, ¿qué tan mal van?"
+**ES responde:** "Cuando perdemos más que VaR, ¿cuánto perdemos en promedio?"
+
+### 4. Stress Testing
+
+No confiar solo en métricas. Simular escenarios:
+- ¿Qué pasa si mañana hay un -20%?
+- ¿Sobrevivimos un 2008?
+- ¿Qué si hay 3 días seguidos de -5%?
+
+---
+
+## Código de Adaptación Completo
+
+```python
+import numpy as np
+from scipy import stats
+
+def analisis_riesgo_robusto(returns):
+    """
+    Framework robusto para análisis de riesgo con fat tails.
+    """
+    
+    # === PASO 1: DIAGNÓSTICO ===
+    alpha = hill_estimator(returns)
+    print(f"Índice de cola α̂ = {alpha:.2f}")
+    
+    if alpha <= 2:
+        print("⚠️ VARIANZA INFINITA - métodos clásicos inválidos")
+    elif alpha <= 4:
+        print("⚡ Fat-tailed - usar métodos robustos")
+    else:
+        print("✓ Casi normal - métodos clásicos aceptables")
+    
+    # === PASO 2: MEDIDAS DE RIESGO ===
+    
+    # NO usar:
+    # var_normal = -(returns.mean() + stats.norm.ppf(0.01) * returns.std())
+    
+    # SÍ usar:
+    var_hist_99 = -np.percentile(returns, 1)
+    var_hist_95 = -np.percentile(returns, 5)
+    
+    es_99 = -returns[returns < -var_hist_99].mean()
+    es_95 = -returns[returns < -var_hist_95].mean()
+    
+    print(f"\nMedidas de riesgo (robustas):")
+    print(f"  VaR 99% (histórico): {var_hist_99*100:.2f}%")
+    print(f"  VaR 95% (histórico): {var_hist_95*100:.2f}%")
+    print(f"  ES 99%: {es_99*100:.2f}%")
+    print(f"  ES 95%: {es_95*100:.2f}%")
+    
+    # === PASO 3: STRESS TEST ===
+    worst_day = returns.min()
+    worst_week = returns.rolling(5).sum().min()
+    worst_month = returns.rolling(22).sum().min()
+    
+    print(f"\nEscenarios históricos extremos:")
+    print(f"  Peor día: {worst_day*100:.2f}%")
+    print(f"  Peor semana: {worst_week*100:.2f}%")
+    print(f"  Peor mes: {worst_month*100:.2f}%")
+    
+    return {
+        'alpha': alpha,
+        'var_99': var_hist_99,
+        'var_95': var_hist_95,
+        'es_99': es_99,
+        'es_95': es_95
+    }
+```
 
 ---
 
 ## Preguntas de Reflexión
 
-1. **¿Cuántas veces se viola el VaR₉₉ vs lo esperado?** ¿Qué tan grave es la subestimación?
+1. **¿Por qué el VaR normal subestima el riesgo?** Relaciona con α ≈ 3.
 
-2. **Cuando el VaR falla, ¿falla por poco o por mucho?** ¿Qué implica esto para la gestión de riesgo?
+2. **¿Por qué el VaR histórico funciona mejor?** ¿Tiene limitaciones?
 
-3. **¿Por qué los reguladores (Basilea) ahora prefieren Expected Shortfall sobre VaR?**
+3. **David Viniar dijo "25 sigmas". ¿Qué debería haber concluido?**
 
-4. **¿Mejora el modelo Student-t?** ¿Qué grados de libertad dan mejor fit?
+4. **¿Por qué Expected Shortfall es mejor que VaR para fat tails?**
 
-5. **Si fueras un regulador bancario, ¿confiarías en los reportes de VaR de los bancos?**
+5. **Si α = 2.5 para tus datos, ¿puedes usar la varianza para medir riesgo?**
 
-6. **¿Qué incentivos tienen los bancos para usar modelos que subestiman el riesgo?**
-
----
-
-## La Conexión con 2008
-
-En agosto de 2007, David Viniar (CFO de Goldman Sachs) dijo:
-
-> "We were seeing things that were 25-standard deviation moves, several days in a row."
-
-Un evento de 25σ tiene probabilidad $\approx 10^{-135}$ bajo normalidad.
-
-**La explicación correcta:** No fueron eventos de 25σ. Los retornos simplemente no son normales. El modelo estaba mal, no la realidad.
-
----
-
-## Extensiones Sugeridas
-
-1. **Diferentes activos:** ¿El VaR falla igual para bonos, oro, Bitcoin?
-
-2. **Diferentes horizontes:** ¿El problema es peor para VaR diario, semanal, o mensual?
-
-3. **VaR condicional:** ¿Mejora si usamos modelos GARCH para la volatilidad?
-
-4. **Pruebas estadísticas formales:** Implementar el test de Kupiec o Christoffersen
+6. **¿Cómo harías stress testing si no hay datos históricos de crisis?**
 
 ---
 
@@ -154,11 +308,31 @@ Un evento de 25σ tiene probabilidad $\approx 10^{-135}$ bajo normalidad.
 
 ```bash
 cd clase/05_probabilidad/ejercicios
+source .venv/bin/activate
 python ejercicio_var.py
 ```
 
 El script generará:
-- Tabla de violaciones esperadas vs observadas
-- Análisis de severidad de violaciones
-- Comparación Normal vs Student-t
-- Gráficas guardadas en `outputs/`
+- Diagnóstico de colas con α̂
+- Tabla de backtesting por método
+- `var_backtesting.png`: Comparación visual de métodos
+- `var_eventos_extremos.png`: Los peores días y sus "sigmas"
+
+---
+
+## Conexión con la Crisis de 2008
+
+El VaR paramétrico fue uno de los culpables:
+- Los bancos pensaban que tenían el riesgo "controlado"
+- Los modelos decían que ciertos eventos eran "imposibles"
+- Cuando ocurrieron los "imposibles", el sistema colapsó
+
+**Lección:** No confíes en modelos que subestiman las colas.
+
+---
+
+## Referencia
+
+- Taleb, N.N. (2020). *Statistical Consequences of Fat Tails*
+- Taleb, N.N. (2007). *The Black Swan*
+- Embrechts, P. et al. (1997). *Modelling Extremal Events*

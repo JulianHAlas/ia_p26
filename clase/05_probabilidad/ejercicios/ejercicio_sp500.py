@@ -25,8 +25,8 @@ plt.rcParams['figure.figsize'] = (12, 8)
 plt.rcParams['font.size'] = 11
 
 # Crear directorio de outputs
-OUTPUT_DIR = Path(__file__).parent / "outputs"
-OUTPUT_DIR.mkdir(exist_ok=True)
+OUTPUT_DIR = Path(__file__).parent / "images" / "sp500"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def descargar_datos(ticker="^GSPC", start="1950-01-01"):
@@ -42,10 +42,14 @@ def descargar_datos(ticker="^GSPC", start="1950-01-01"):
     """
     print(f"📥 Descargando datos de {ticker} desde {start}...")
     
-    data = yf.download(ticker, start=start, progress=False)
+    data = yf.download(ticker, start=start, progress=False, auto_adjust=True)
+    
+    # Manejar MultiIndex columns (yfinance >= 0.2.40)
+    if isinstance(data.columns, pd.MultiIndex):
+        data.columns = data.columns.get_level_values(0)
     
     # Calcular retornos logarítmicos
-    data['Returns'] = np.log(data['Adj Close'] / data['Adj Close'].shift(1))
+    data['Returns'] = np.log(data['Close'] / data['Close'].shift(1))
     data = data.dropna()
     
     print(f"   ✓ {len(data)} observaciones descargadas")
@@ -54,8 +58,39 @@ def descargar_datos(ticker="^GSPC", start="1950-01-01"):
     return data
 
 
+def hill_estimator(data, k=None):
+    """
+    Estimador de Hill para el índice de cola α.
+    
+    α < 2: varianza infinita
+    α < 1: media infinita
+    """
+    sorted_data = np.sort(np.abs(data))[::-1]
+    n = len(sorted_data)
+    
+    if k is None:
+        k = int(np.sqrt(n))
+    
+    k = min(k, n - 1)
+    log_ratios = np.log(sorted_data[:k] / sorted_data[k])
+    alpha_hat = k / np.sum(log_ratios)
+    
+    return alpha_hat
+
+
+def kappa_taleb(data):
+    """
+    Criterio Kappa de Taleb: κ = max(|X|) / sum(|X|)
+    
+    κ → 0: thin tails
+    κ alto: fat tails (una observación domina)
+    """
+    data_pos = np.abs(data)
+    return np.max(data_pos) / np.sum(data_pos)
+
+
 def calcular_estadisticas(returns):
-    """Calcula estadísticas básicas de los retornos."""
+    """Calcula estadísticas básicas y diagnósticos de fat tails."""
     mu = returns.mean()
     sigma = returns.std()
     
@@ -64,6 +99,26 @@ def calcular_estadisticas(returns):
     print(f"   Desv. Est (σ): {sigma*100:.4f}%")
     print(f"   Asimetría:     {stats.skew(returns):.3f}")
     print(f"   Curtosis:      {stats.kurtosis(returns):.3f} (normal = 0)")
+    
+    # Diagnósticos de fat tails (Metodología Taleb)
+    alpha = hill_estimator(returns.values)
+    kappa = kappa_taleb(returns.values)
+    
+    print(f"\n🎯 Diagnósticos de Fat Tails (Metodología Taleb):")
+    print(f"   Estimador de Hill (α̂): {alpha:.2f}")
+    print(f"   Kappa (max/sum):        {kappa:.6f}")
+    
+    if alpha > 4:
+        print(f"   → α > 4: Kurtosis finita, cerca de thin tails")
+    elif alpha > 2:
+        print(f"   → 2 < α ≤ 4: Varianza finita, kurtosis INFINITA")
+        print(f"     El TLC funciona pero MUY LENTO")
+    elif alpha > 1:
+        print(f"   → 1 < α ≤ 2: ¡VARIANZA INFINITA!")
+        print(f"     TLC NO funciona, LGN muy lento")
+    else:
+        print(f"   → α ≤ 1: ¡MEDIA INFINITA!")
+        print(f"     Ningún teorema límite funciona")
     
     return mu, sigma
 
@@ -275,6 +330,81 @@ def plot_eventos_tiempo(data, mu, sigma):
     print(f"   ✓ Guardado: {OUTPUT_DIR / 'sp500_eventos_tiempo.png'}")
 
 
+def plot_diagnosticos_fattails(returns):
+    """
+    Gráficos de diagnóstico de fat tails (Metodología Taleb).
+    """
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    
+    data = returns.values
+    
+    # Panel 1: Log-log survival plot
+    ax = axes[0, 0]
+    sorted_data = np.sort(np.abs(data))[::-1]
+    n = len(sorted_data)
+    survival = np.arange(1, n + 1) / n
+    
+    ax.loglog(sorted_data, survival, 'b.', alpha=0.3, markersize=2)
+    ax.set_xlabel('|Retorno|')
+    ax.set_ylabel('P(|X| > x)')
+    ax.set_title('Log-Log Survival Plot\n(Línea recta = Power Law = Fat Tail)')
+    ax.grid(True, alpha=0.3)
+    
+    # Panel 2: Hill estimator para diferentes k
+    ax = axes[0, 1]
+    ks = np.arange(20, int(np.sqrt(n) * 3), 10)
+    alphas = [hill_estimator(data, k) for k in ks]
+    
+    ax.plot(ks, alphas, 'b-', linewidth=2)
+    ax.axhline(y=2, color='red', linestyle='--', linewidth=2, label='α=2 (Var=∞)')
+    ax.axhline(y=3, color='orange', linestyle='--', linewidth=1, label='α=3')
+    ax.axhline(y=4, color='green', linestyle='--', linewidth=1, label='α=4')
+    ax.set_xlabel('k (observaciones en la cola)')
+    ax.set_ylabel('α̂ (Hill)')
+    ax.set_title(f'Estimador de Hill\nα̂ ≈ {hill_estimator(data):.2f}')
+    ax.legend()
+    ax.set_ylim(0, 6)
+    ax.grid(True, alpha=0.3)
+    
+    # Panel 3: Evolución de kappa
+    ax = axes[1, 0]
+    ns = np.logspace(2, np.log10(len(data)), 50).astype(int)
+    kappas = [kappa_taleb(data[:n]) for n in ns]
+    
+    ax.semilogx(ns, kappas, 'b-', linewidth=2)
+    ax.axhline(y=0.01, color='red', linestyle='--', label='κ=0.01 (umbral)')
+    ax.set_xlabel('n (tamaño de muestra)')
+    ax.set_ylabel('κ = max/sum')
+    ax.set_title('Criterio Kappa de Taleb\n(Alto = una observación domina)')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    
+    # Panel 4: Mean Excess Function
+    ax = axes[1, 1]
+    data_pos = np.abs(data)
+    thresholds = np.percentile(data_pos, np.linspace(50, 99, 50))
+    mean_excess = []
+    
+    for u in thresholds:
+        excesses = data_pos[data_pos > u] - u
+        if len(excesses) > 10:
+            mean_excess.append(np.mean(excesses))
+        else:
+            mean_excess.append(np.nan)
+    
+    ax.plot(thresholds * 100, mean_excess, 'b-', linewidth=2)
+    ax.set_xlabel('Umbral u (%)')
+    ax.set_ylabel('E[|X| - u | |X| > u]')
+    ax.set_title('Mean Excess Function\n(Creciente = Fat Tail, Constante = Exponencial)')
+    ax.grid(True, alpha=0.3)
+    
+    plt.suptitle('Diagnósticos de Fat Tails (Metodología Taleb)', fontsize=14)
+    plt.tight_layout()
+    plt.savefig(OUTPUT_DIR / 'sp500_fattails_diagnosticos.png', dpi=150, bbox_inches='tight')
+    plt.close()
+    print(f"   ✓ Guardado: {OUTPUT_DIR / 'sp500_fattails_diagnosticos.png'}")
+
+
 def main():
     """Ejecuta el análisis completo."""
     print("="*60)
@@ -313,6 +443,7 @@ def main():
     plot_histograma_vs_normal(returns, mu, sigma)
     plot_qqplot(returns)
     plot_eventos_tiempo(data, mu, sigma)
+    plot_diagnosticos_fattails(returns)
     
     # 6. Resumen final
     print("\n" + "="*60)
@@ -322,17 +453,32 @@ def main():
     eventos_4sigma_obs = np.sum(np.abs(returns - mu) > 4 * sigma)
     eventos_4sigma_esp = 2 * (1 - stats.norm.cdf(4)) * len(returns)
     
+    alpha_hill = hill_estimator(returns.values)
+    
     print(f"""
     En {len(returns)} días de trading del S&P 500:
     
+    📊 EVENTOS EXTREMOS:
     • Eventos >4σ esperados (si fuera normal): {eventos_4sigma_esp:.1f}
     • Eventos >4σ observados:                  {eventos_4sigma_obs}
     • Factor de subestimación:                 {eventos_4sigma_obs/eventos_4sigma_esp:.0f}x
     
-    El modelo normal subestima los eventos extremos por un factor de ~{eventos_4sigma_obs/eventos_4sigma_esp:.0f}.
+    🎯 DIAGNÓSTICO DE COLAS (Taleb):
+    • Índice de cola estimado (Hill): α̂ = {alpha_hill:.2f}
+    • Interpretación: {'Varianza finita, kurtosis infinita' if alpha_hill > 2 else '¡VARIANZA INFINITA!'}
     
-    Esto significa que si usas modelos normales para gestionar riesgo,
-    estás SISTEMÁTICAMENTE subestimando la probabilidad de pérdidas extremas.
+    ⚠️  CONCLUSIONES:
+    
+    1. El S&P 500 tiene colas MUCHO más pesadas que la normal
+    2. El modelo normal subestima eventos extremos por ~{eventos_4sigma_obs/eventos_4sigma_esp:.0f}x
+    3. El índice de cola α ≈ {alpha_hill:.1f} implica que:
+       {'- La varianza es finita pero la kurtosis es infinita' if alpha_hill > 2 else '- ¡La varianza es infinita!'}
+       - El Teorema del Límite Central converge MUY lentamente
+       - Los modelos de riesgo basados en varianza son inadecuados
+    
+    ⛔ ADVERTENCIA: Student-t NO es suficiente para modelar estos datos.
+       Student-t tiene colas que decaen más rápido que power law real.
+       Usar Student-t = SUBESTIMAR el riesgo.
     
     ¡Investiga las fechas de los cisnes negros!
     """)
