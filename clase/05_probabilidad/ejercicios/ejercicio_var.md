@@ -14,7 +14,7 @@ El Value at Risk responde la pregunta:
 
 **Definición formal:** VaR al nivel de confianza α es el cuantil (1-α) de la distribución de pérdidas.
 
-$$\text{VaR}_\alpha = -Q_{1-\alpha}(R)$$
+$$\text{VaR}_\alpha = -Q_{1-\alpha}(\mathcal{R})$$
 
 donde $Q_p$ es el cuantil p de los retornos R.
 
