@@ -19,6 +19,50 @@ title: "Probabilidad: Razonamiento bajo Incertidumbre"
 | [07](07_reglas_probabilidad.md) | Las Reglas de Probabilidad | Regla del producto y suma; Jaynes vs Kolmogorov |
 | [08](08_bayes.md) | Teorema de Bayes | La joya de la corona: actualización de creencias |
 | [09](09_esperanza_momentos.md) | Esperanza y Momentos | Valores esperados, varianza, covarianza |
+| [11](11_distribuciones.md) | Distribuciones | Normal, Exponencial, Pareto, Cauchy y más |
+| [12](12_estadistica_estimadores.md) | Estadística y Estimadores | MLE, método de momentos, estimación puntual |
+| [13](13_tlc_lgn.md) | TLC y LGN | Teorema del Límite Central y Ley de los Grandes Números |
+| [14](14_colas_largas.md) | Colas Largas (Fat Tails) | Cuando el TLC falla — Taleb y fenómenos extremos |
+
+## Laboratorio
+
+| Archivo | Descripción |
+|---------|-------------|
+| [lab_probabilidad.py](lab_probabilidad.py) | Simulaciones en Python: TLC, LGN, fat tails. Genera imágenes para las notas. |
+
+Para ejecutar el laboratorio:
+```bash
+cd clase/05_probabilidad
+python lab_probabilidad.py
+```
+
+## Ejercicios Prácticos: Fat Tails
+
+Ejercicios interactivos para entender las colas largas usando datos reales y simulaciones.
+
+| Ejercicio | Descripción | Datos |
+|-----------|-------------|-------|
+| [S&P 500](ejercicios/ejercicio_sp500.md) | Los eventos "imposibles" del mercado | Reales |
+| [VaR](ejercicios/ejercicio_var.md) | Por qué el Value at Risk falla | Reales |
+| [Sintético](ejercicios/ejercicio_sintetico.md) | Anatomía de las colas largas | Simulados |
+
+**Setup con uv:**
+```bash
+cd clase/05_probabilidad/ejercicios
+
+# Crear entorno
+uv venv && source .venv/bin/activate
+
+# Instalar dependencias
+uv pip install -r requirements.txt
+
+# Ejecutar
+python ejercicio_sp500.py
+python ejercicio_var.py
+python ejercicio_sintetico.py
+```
+
+Ver [ejercicios/README.md](ejercicios/README.md) para instrucciones completas.
 
 ## Tareas
 
@@ -69,6 +113,25 @@ LÓGICA DEDUCTIVA          RAZONAMIENTO PLAUSIBLE
         ┌───────▼───────┐
         │    BAYES      │
         │   THEOREM     │
+        └───────┬───────┘
+                │
+    ┌───────────┴───────────┐
+    │                       │
+┌───▼───────┐       ┌───────▼───────┐
+│DISTRIBU-  │       │ ESTADÍSTICA   │
+│CIONES     │       │ (MLE, etc.)   │
+└───┬───────┘       └───────┬───────┘
+    │                       │
+    └───────────┬───────────┘
+                │
+        ┌───────▼───────┐
+        │  TLC & LGN    │
+        │ (convergencia)│
+        └───────┬───────┘
+                │
+        ┌───────▼───────┐
+        │  FAT TAILS    │
+        │ (¡cuidado!)   │
         └───────────────┘
 ```
 
