@@ -107,9 +107,34 @@ Lectura operacional:
 
 > Menos entropía = menos bits esperados para descubrir el valor (si haces buenas preguntas/estrategias).
 
-![Entropía vs concentración]({{ '/06_teoria_de_la_informacion/images/entropia_concentracion.png' | url }})
+### ¿De dónde sale la gráfica? (qué distribución se está variando)
 
-*La gráfica muestra cómo $H$ cae cuando pasas de un prior uniforme a uno concentrado. Esto es la intuición “operativa” que usaremos en Wordle/password: si el prior está concentrado, adivinar es más fácil en promedio.*
+Para que la gráfica signifique algo, hay que decir qué familia de distribuciones estamos moviendo.
+
+Usamos una familia muy controlada y explícita: una mezcla entre
+
+- una distribución **uniforme** $u$ sobre $N$ símbolos, y
+- una distribución **determinista** (“one-hot”) que pone toda la masa en un solo símbolo.
+
+Definimos, para $a\\in[0,1]$:
+
+$$
+p(a) \\,=\\, (1-a)\\,u \\,+\\, a\\,\\text{onehot}
+$$
+
+Es decir: cuando $a=0$ tienes máxima incertidumbre (uniforme), y cuando $a\\to 1$ casi todo el peso cae en una sola opción.
+
+![Entropía vs concentración (varios N)]({{ '/06_teoria_de_la_informacion/images/entropia_concentracion_familias.png' | url }})
+
+*En todos los casos se ve lo mismo: al concentrar el prior, la entropía cae. La escala cambia con $N$ porque el máximo posible en uniforme es $H(u)=\\log_2 N$.*
+
+![Cómo se ve la concentración (barras)]({{ '/06_teoria_de_la_informacion/images/entropia_concentracion_distribuciones.png' | url }})
+
+*Estas barras muestran literalmente qué significa “concentrar”: para $a$ grande, una barra domina y las demás son pequeñas.*
+
+![Entropía vs concentración (N=12, mezcla uniforme→onehot)]({{ '/06_teoria_de_la_informacion/images/entropia_concentracion.png' | url }})
+
+*La lectura “operativa” para Wordle/password: si tu prior está concentrado, en promedio necesitas menos bits/preguntas para identificar la respuesta; si es casi uniforme, necesitas más.*
 
 ---
 

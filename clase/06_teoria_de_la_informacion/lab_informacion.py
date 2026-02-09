@@ -300,25 +300,60 @@ def plot_entropy_dirichlet_like():
     We build a family of distributions over N symbols by interpolating
     between uniform and a 'peaked' distribution.
     """
+    # Family A: mix between uniform and one-hot (peaked on a single symbol)
+    #   p_i(a) = (1-a)/N + a * 1{i=1}
+    # This is a clean, controlled path from maximum-entropy (uniform) to minimum (deterministic).
+
+    alphas = np.linspace(0, 1, 201)
+
+    # (1) Multi-scenario plot: different N
+    fig, ax = plt.subplots()
+    for N, color in [(4, COLORS["blue"]), (12, COLORS["red"]), (50, COLORS["green"])]:
+        uniform = np.ones(N) / N
+        peaked = np.zeros(N)
+        peaked[0] = 1.0
+        hs = []
+        for a in alphas:
+            p = (1 - a) * uniform + a * peaked
+            hs.append(entropy_bits(p))
+        ax.plot(alphas, hs, linewidth=2, color=color, label=f"N={N}")
+
+    ax.set_title("Entropía vs concentración (familia p(a) = (1-a)u + a·onehot)")
+    ax.set_xlabel("a (0=uniforme, 1=determinista)")
+    ax.set_ylabel("H (bits)")
+    ax.legend(title="Tamaño del soporte")
+    ax.annotate("Máximo en uniforme", xy=(0.0, math.log(12, 2)), xytext=(0.05, math.log(12, 2) - 0.6))
+    ax.annotate("0 bits cuando a→1", xy=(1.0, 0.0), xytext=(0.62, 0.35))
+    _save(fig, "entropia_concentracion_familias.png")
+
+    # (2) Single-scenario plot (N=12) kept for continuity, but now explicit in the title/caption.
     N = 12
     uniform = np.ones(N) / N
     peaked = np.zeros(N)
     peaked[0] = 1.0
-
-    alphas = np.linspace(0, 1, 101)
-    hs = []
-    for a in alphas:
-        p = (1 - a) * uniform + a * peaked
-        hs.append(entropy_bits(p))
-
+    hs = [entropy_bits((1 - a) * uniform + a * peaked) for a in alphas]
     fig, ax = plt.subplots()
     ax.plot(alphas, hs, color=COLORS["red"], linewidth=2)
-    ax.set_title("Entropía disminuye cuando el prior se concentra")
-    ax.set_xlabel("a (0=uniforme, 1=concentrado)")
+    ax.set_title("Entropía disminuye cuando el prior se concentra (N=12, mezcla uniforme→onehot)")
+    ax.set_xlabel("a (0=uniforme, 1=determinista)")
     ax.set_ylabel("H (bits)")
-    ax.annotate("Uniforme", xy=(0, hs[0]), xytext=(0.05, hs[0] - 0.5))
-    ax.annotate("Concentrado", xy=(1, hs[-1]), xytext=(0.65, hs[-1] + 0.4))
+    ax.annotate("Uniforme: p_i=1/12", xy=(0, hs[0]), xytext=(0.06, hs[0] - 0.45))
+    ax.annotate("Determinista: p_1≈1", xy=(1, hs[-1]), xytext=(0.62, 0.35))
     _save(fig, "entropia_concentracion.png")
+
+    # (3) What do these distributions look like? Show bar charts for selected a.
+    fig, axes = plt.subplots(1, 3, figsize=(14, 4), sharey=True)
+    for ax_i, a in zip(axes, [0.0, 0.6, 0.9]):
+        p = (1 - a) * uniform + a * peaked
+        ax_i.bar(np.arange(1, N + 1), p, color=COLORS["gray"], alpha=0.9)
+        ax_i.set_title(f"N=12, a={a:.1f}")
+        ax_i.set_xlabel("símbolo i")
+        if ax_i is axes[0]:
+            ax_i.set_ylabel("p_i")
+        ax_i.set_ylim(0, 1.0)
+    fig.suptitle("Cómo se ve la concentración: distribuciones p(a) para N=12", y=1.05)
+    plt.tight_layout()
+    _save(fig, "entropia_concentracion_distribuciones.png")
 
 
 # -----------------------------------------------------------------------------
