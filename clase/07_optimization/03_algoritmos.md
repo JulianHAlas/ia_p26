@@ -284,6 +284,67 @@ Solución: $(x^{∗}, y^{∗}) = (1/2, 1/2)$, con $f^{∗} = 1/2$.
 
 ---
 
+## Dualidad (primal vs dual): el caso de programación lineal
+
+La **dualidad** es una idea central: en vez de optimizar directamente sobre las variables “del problema” (el **primal**), puedes construir otro problema (el **dual**) cuyas variables son los multiplicadores/“precios” de las restricciones.
+
+### Primal y dual en LP (forma estándar)
+
+Considera el primal:
+
+$$
+\text{(P)}\quad \max \; p^T x \quad \text{s.t.}\quad Ax \le b,\quad x \ge 0
+$$
+
+Su dual es:
+
+$$
+\text{(D)}\quad \min \; b^T y \quad \text{s.t.}\quad A^T y \ge p,\quad y \ge 0
+$$
+
+**Interpretación:** \(y_i\) es el **precio sombra** (valor marginal) del recurso \(i\).
+
+### ¿Por qué importa?
+
+- **Dualidad débil (weak duality):** para cualquier \(x\) factible y cualquier \(y\) factible,
+  \[
+  p^T x \le b^T y
+  \]
+  Es decir: el dual da una **cota superior** para el valor del primal (cuando el primal es de maximización).
+- **Dualidad fuerte (strong duality):** en programación lineal (y en convexos “bien portados”), en el óptimo se cumple
+  \[
+  p^T x^\* = b^T y^\*
+  \]
+  No hay “gap” primal-dual.
+
+### Conexión con KKT (holgura complementaria)
+
+En LP, KKT se reduce a factibilidad primal/dual + **holgura complementaria**:
+
+- \(y_i\,(b_i - (Ax)_i) = 0\) (si una restricción no es activa, su precio es 0)
+- \(x_j\,((A^T y)_j - p_j) = 0\) (si una variable es positiva, su desigualdad dual está “apretada”)
+
+### Ejemplo: producción (el del módulo)
+
+Primal:
+
+$$
+\max\; 5x_1 + 4x_2\;\;\text{s.t.}\;\; 6x_1 + 4x_2 \le 24,\;\; x_1 + 2x_2 \le 6,\;\; x_1,x_2 \ge 0
+$$
+
+Dual:
+
+$$
+\min\; 24y_1 + 6y_2\;\;\text{s.t.}\;\; 6y_1 + y_2 \ge 5,\;\; 4y_1 + 2y_2 \ge 4,\;\; y_1,y_2 \ge 0
+$$
+
+- \(y_1\): precio sombra del **recurso A** (la restricción \(6x_1 + 4x_2 \le 24\))
+- \(y_2\): precio sombra del **recurso B** (la restricción \(x_1 + 2x_2 \le 6\))
+
+Si aumentas un poquito \(b_1\) (más recurso A), el óptimo del primal típicamente aumenta ~\(y_1^\* \cdot \Delta b_1\). En el notebook lo verificamos numéricamente y lo visualizamos en 2D.
+
+---
+
 ## Condiciones KKT (restricciones de desigualdad)
 
 Las condiciones de **Karush-Kuhn-Tucker** extienden Lagrange a restricciones de desigualdad $g_j(x) \leq 0$.
