@@ -57,16 +57,24 @@ $$P(B \mid A) = \frac{P(A \mid B) \cdot P(B)}{P(A)}$$
 
 ## El problema: la distribución conjunta es enorme
 
-Imagina que tienes $n$ variables binarias (cada una vale 0 o 1). La distribución conjunta $P(X_1, X_2, \ldots, X_n)$ es una tabla con $2^n$ entradas.
+Imagina que tienes $n$ variables binarias (cada una vale 0 o 1). Un “mundo posible” es una asignación completa de valores, por ejemplo:
 
-| Variables | Entradas en la tabla |
+$$X_1=0,\; X_2=1,\; \ldots,\; X_n=0$$
+
+Como cada variable tiene 2 valores, el número de asignaciones posibles (combinaciones) es $2^{n}$. La distribución conjunta
+
+$$P(X_1, X_2, \ldots, X_n)$$
+
+debe asignar una probabilidad a **cada** asignación, es decir, a cada término $P(X_1=x_1,\ldots,X_n=x_n)$.
+
+| $n$ variables binarias | Asignaciones posibles ($2^{n}$) |
 |:---------:|:--------------------:|
 | 5 | 32 |
 | 10 | 1,024 |
 | 20 | 1,048,576 |
 | 30 | 1,073,741,824 |
 
-Con 30 variables binarias necesitaríamos **más de mil millones** de números. Esto es inviable.
+Así, con 30 variables binarias, la tabla de la conjunta tendría **más de mil millones** de probabilidades. Esto es inviable.
 
 **La pregunta clave:** ¿Podemos representar la conjunta de forma más compacta?
 
