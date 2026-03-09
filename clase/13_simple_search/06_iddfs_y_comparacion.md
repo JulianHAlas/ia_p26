@@ -31,11 +31,16 @@ La observación clave es que BFS encuentra el objetivo a la profundidad mínima 
 **IDDFS**: ejecuta DFS con límite $0$, luego con límite $1$, luego $2$, así sucesivamente hasta encontrar la solución.
 
 ```
-IDDFS(problema):
-    para d = 0, 1, 2, 3, ...:
-        resultado ← DFS-CON-LÍMITE(problema, d)
-        si resultado ≠ FALLO:
-            devolver resultado
+function IDDFS(problema):
+
+    for d = 0, 1, 2, 3, ...:               # incrementar el límite de profundidad en cada intento
+
+        resultado ← DFS-WITH-LIMIT(problema, d)   # DFS que nunca pasa de profundidad d
+                                                    # internamente: busqueda_generica + StackFrontier(limite=d)
+
+        if resultado ≠ FAILURE:             # ¿encontró la meta con este límite?
+            return resultado                # sí → devolver el camino encontrado
+                                            # no → probar con límite d+1
 ```
 
 ---

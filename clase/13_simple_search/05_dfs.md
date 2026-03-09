@@ -24,42 +24,51 @@ DFS **va tan profundo como puede** en una rama antes de considerar ramas alterna
 
 1. Crea una **pila** (LIFO) con el nodo inicial.
 2. Mientras la pila no esté vacía:
-   a. Toma el nodo *más reciente* de la pila (el último en entrar).
-   b. Si es la meta, reconstruye y devuelve el camino.
-   c. Márcalo como explorado.
-   d. Añade a la pila todos sus vecinos que no hayan sido explorados ni estén ya en la pila.
+   1. Toma el nodo *más reciente* de la pila (el último en entrar).
+   2. Si es la meta, reconstruye y devuelve el camino.
+   3. Márcalo como explorado.
+   4. Añade a la pila todos sus vecinos que no hayan sido explorados ni estén ya en la pila.
 3. Si la pila se vacía sin encontrar la meta, devuelve fallo.
 
-La diferencia con BFS está en el paso 2a: **el más reciente**, no el más antiguo. Esto hace que DFS "se entierre" en la rama más nueva antes de retroceder.
+La diferencia con BFS está en el paso 2.1: **el más reciente**, no el más antiguo. Esto hace que DFS "se entierre" en la rama más nueva antes de retroceder.
 
 ---
 
 ## 3. Pseudocódigo (antes del ejemplo)
 
 ```
-DFS(problema):
-    frontera ← Pila con [inicio]
-    explorado ← {}
-    padre ← {inicio: null}
+function DFS(problema):
 
-    mientras frontera no vacía:
-        nodo ← frontera.POP()               [L1: tomar el más reciente]
+    # ── Initialization ─────────────────────────────────────────────────────
+    frontera ← new StackFrontier()          # pila LIFO vacía — el más reciente sale primero
+    frontera.push(problema.inicio)          # el nodo inicial es el primer pendiente
 
-        si ES-META(nodo):                   [L2: test de objetivo]
-            devolver RECONSTRUIR(padre, nodo)
+    explorado ← empty set                   # nodos ya procesados completamente
+    padre ← { problema.inicio: null }       # de dónde llegamos a cada nodo; inicio no tiene padre
 
-        explorado.añadir(nodo)              [L3: marcar como explorado]
+    # ── Main loop ──────────────────────────────────────────────────────────
+    while frontera is not empty:
 
-        para vecino en VECINOS(nodo):       [L4: expandir vecinos]
-            si vecino ∉ explorado
-            y vecino ∉ frontera:
-                padre[vecino] ← nodo
-                frontera.AÑADIR(vecino)     [L5: apilar vecino]
+        nodo ← frontera.pop()              # [L1] LIFO → saca el más RECIENTE de la pila
+                                            #      ← única diferencia con BFS (que usa FIFO)
 
-    devolver FALLO
+        if problema.is_goal(nodo):          # [L2] ¿es este nodo la meta?
+            return reconstruct(padre, nodo) #      sí → seguir padres hacia atrás para obtener el camino
+
+        explorado.add(nodo)                 # [L3] marcar como procesado — no volver a expandirlo
+
+        for each vecino in problema.neighbors(nodo):  # [L4] mirar todos los nodos conectados a nodo
+
+            if vecino not in explorado      #      condición 1: ¿ya lo procesamos? → ignorar
+            and vecino not in frontera:     #      condición 2: ¿ya está pendiente? → no duplicar
+
+                padre[vecino] ← nodo        #      registrar: "llegué a vecino viniendo desde nodo"
+                frontera.push(vecino)       # [L5] añadirlo a la pila de pendientes
+
+    return FAILURE                          # pila vacía sin encontrar meta → no hay solución
 ```
 
-Compara con el pseudocódigo de BFS: **la única diferencia es `POP()` vs `POPLEFT()`**.
+Compara con el pseudocódigo de BFS: **la única diferencia es `[L1]` — `pop()` saca el más reciente (LIFO) en vez del más antiguo (FIFO)**. Todo lo demás es línea por línea idéntico.
 
 ---
 

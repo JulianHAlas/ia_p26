@@ -29,42 +29,51 @@ Antes de ver código:
 
 1. Crea una **cola** (FIFO) con el nodo inicial.
 2. Mientras la cola no esté vacía:
-   a. Toma el nodo *más antiguo* de la cola (el primero en entrar).
-   b. Si es la meta, reconstruye y devuelve el camino.
-   c. Márcalo como explorado.
-   d. Añade a la cola todos sus vecinos que no hayan sido explorados ni estén ya en la cola.
+   1. Toma el nodo *más antiguo* de la cola (el primero en entrar).
+   2. Si es la meta, reconstruye y devuelve el camino.
+   3. Márcalo como explorado.
+   4. Añade a la cola todos sus vecinos que no hayan sido explorados ni estén ya en la cola.
 3. Si la cola se vacía sin encontrar la meta, devuelve fallo.
 
-La clave está en el paso 2a: siempre procesamos el nodo *más antiguo*. Esto garantiza que los nodos más cercanos al inicio se procesan antes que los más lejanos.
+La clave está en el paso 2.1: siempre procesamos el nodo *más antiguo*. Esto garantiza que los nodos más cercanos al inicio se procesan antes que los más lejanos.
 
 ---
 
 ## 3. Pseudocódigo (antes del ejemplo)
 
 ```
-BFS(problema):
-    frontera ← Cola con [inicio]
-    explorado ← {}
-    padre ← {inicio: null}
+function BFS(problema):
 
-    mientras frontera no vacía:
-        nodo ← frontera.POPLEFT()           [L1: tomar el más antiguo]
+    # ── Initialization ─────────────────────────────────────────────────────
+    frontera ← new QueueFrontier()          # cola FIFO vacía — el más antiguo sale primero
+    frontera.push(problema.inicio)          # el nodo inicial es el primer pendiente
 
-        si ES-META(nodo):                   [L2: test de objetivo]
-            devolver RECONSTRUIR(padre, nodo)
+    explorado ← empty set                   # nodos ya procesados completamente
+    padre ← { problema.inicio: null }       # de dónde llegamos a cada nodo; inicio no tiene padre
 
-        explorado.añadir(nodo)              [L3: marcar como explorado]
+    # ── Main loop ──────────────────────────────────────────────────────────
+    while frontera is not empty:
 
-        para vecino en VECINOS(nodo):       [L4: expandir vecinos]
-            si vecino ∉ explorado
-            y vecino ∉ frontera:
-                padre[vecino] ← nodo
-                frontera.AÑADIR(vecino)     [L5: encolar vecino]
+        nodo ← frontera.pop()              # [L1] FIFO → saca el más ANTIGUO de la cola
+                                            #      ← aquí está la diferencia con DFS (que usa LIFO)
 
-    devolver FALLO
+        if problema.is_goal(nodo):          # [L2] ¿es este nodo la meta?
+            return reconstruct(padre, nodo) #      sí → seguir padres hacia atrás para obtener el camino
+
+        explorado.add(nodo)                 # [L3] marcar como procesado — no volver a expandirlo
+
+        for each vecino in problema.neighbors(nodo):  # [L4] mirar todos los nodos conectados a nodo
+
+            if vecino not in explorado      #      condición 1: ¿ya lo procesamos? → ignorar
+            and vecino not in frontera:     #      condición 2: ¿ya está pendiente? → no duplicar
+
+                padre[vecino] ← nodo        #      registrar: "llegué a vecino viniendo desde nodo"
+                frontera.push(vecino)       # [L5] añadirlo a la cola de pendientes
+
+    return FAILURE                          # cola vacía sin encontrar meta → no hay solución
 ```
 
-Referencia rápida: las etiquetas `[L1]`–`[L5]` aparecerán en el ejemplo paso a paso a continuación.
+Referencia rápida: las etiquetas `[L1]`–`[L5]` aparecerán en la tabla del ejemplo paso a paso a continuación.
 
 ---
 
