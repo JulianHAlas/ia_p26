@@ -178,11 +178,13 @@ Nota: `popleft()` de `deque` es $O(1)$. Si usáramos una lista Python ordinaria,
 
 ### Tiempo: $O(b^d)$
 
-Cada nodo entra a la frontera **a lo sumo una vez** (gracias al conjunto explorado y la verificación de frontera). Cada vez que procesamos un nodo, revisamos todas sus aristas. En términos del **factor de ramificación** $b$ (número promedio de vecinos) y la **profundidad de la solución** $d$:
+Cada nodo entra a la frontera **a lo sumo una vez** (gracias al conjunto explorado y la verificación de frontera). Cada vez que procesamos un nodo, revisamos todas sus aristas. En términos del **factor de ramificación** $b$ (**número máximo** de vecinos de cualquier nodo) y la **profundidad de la solución** $d$:
 
 $$T_{\text{BFS}} = O(b^d)$$
 
-Esto es porque BFS explora nivel a nivel: el nivel 0 tiene 1 nodo, el nivel 1 tiene $b$, el nivel 2 tiene $b^2$, ..., el nivel $d$ tiene $b^d$. El total es $1 + b + b^2 + \cdots + b^d = O(b^d)$ — dominado por el último nivel.
+Esto es porque BFS explora nivel a nivel: el nivel 0 tiene 1 nodo, el nivel 1 tiene *a lo sumo* $b$, el nivel 2 tiene *a lo sumo* $b^2$, ..., el nivel $d$ tiene *a lo sumo* $b^d$. El total es $1 + b + b^2 + \cdots + b^d = O(b^d)$ — dominado por el último nivel.
+
+> **Nota sobre $b$ máximo vs. promedio:** con $b = b_{max}$ esta es una cota de peor caso. Si el grafo es irregular y la mayoría de nodos tienen menos de $b_{max}$ vecinos, el número real de nodos explorados será menor — pero $O(b^d)$ sigue siendo válido como garantía superior.
 
 ### Espacio: $O(b^d)$ — el verdadero cuello de botella de BFS
 
@@ -274,7 +276,7 @@ En mapas de cuadrículas (videojuegos, robótica), BFS da el camino mínimo en n
 | Completo | Sí | Explora exhaustivamente nivel a nivel |
 | Óptimo | Sí (sin pesos) | Expande nodos en orden no-decreciente de distancia |
 
-Recordatorio de notación: $b$ = factor de ramificación (vecinos por nodo), $d$ = profundidad de la solución, $m$ = profundidad máxima del grafo. Definidos en [03 — Algoritmo genérico →](03_busqueda_generica.md).
+Recordatorio de notación: $b$ = factor de ramificación (**máximo** de vecinos por nodo; peor caso), $d$ = profundidad de la solución, $m$ = profundidad máxima del grafo. Definidos en [03 — Algoritmo genérico →](03_busqueda_generica.md).
 
 ---
 

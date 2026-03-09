@@ -313,9 +313,11 @@ IDDFS tiene dos partes que analizar por separado: el tiempo (que sí se acumula 
 
 La pregunta clave es: **¿cuántos nodos expande IDDFS en total, contando todas las pasadas?**
 
-Cada pasada con límite $k$ expande todos los nodos hasta profundidad $k$:
+Usamos $b$ como el **número máximo de vecinos** de cualquier nodo — lo que hace de estas cotas garantías de peor caso. En grafos con vecinos variables, $b_{max}$ da la cota superior; usar $b_{avg}$ daría una estimación más ajustada pero solo para el caso promedio.
 
-$$\text{Nodos en pasada } k = \sum_{j=0}^{k} b^j = 1 + b + b^2 + \cdots + b^k$$
+Cada pasada con límite $k$ expande *a lo sumo* todos los nodos hasta profundidad $k$:
+
+$$\text{Nodos en pasada } k \leq \sum_{j=0}^{k} b^j = 1 + b + b^2 + \cdots + b^k$$
 
 Para llegar a una solución a profundidad $d$, IDDFS ejecuta pasadas $0, 1, 2, \ldots, d$. El total acumulado es la **suma de todas las pasadas**:
 
@@ -455,7 +457,7 @@ En dispositivos embebidos (microcontroladores, robots con memoria restringida), 
 | Completo | Sí | Prueba todos los límites hasta $d^{∗}$ |
 | Óptimo | Sí (sin pesos) | Nunca termina antes de agotar profundidad $d-1$ |
 
-Recordatorio de notación: $b$ = factor de ramificación (vecinos por nodo), $d$ = profundidad de la solución (aristas del camino más corto), $m$ = profundidad máxima del grafo. Definidos en [03 — Algoritmo genérico →](03_busqueda_generica.md).
+Recordatorio de notación: $b$ = factor de ramificación (**máximo** de vecinos por nodo; peor caso), $d$ = profundidad de la solución (aristas del camino más corto), $m$ = profundidad máxima del grafo. Definidos en [03 — Algoritmo genérico →](03_busqueda_generica.md).
 
 ---
 
@@ -471,7 +473,7 @@ Recordatorio de notación: $b$ = factor de ramificación (vecinos por nodo), $d$
 | **Re-expande nodos** | No | No | Sí (constante por pasada) |
 | **Implementación** | `popleft()` | `pop()` | bucle + `pop()` con poda |
 
-Donde: $b$ = factor de ramificación (vecinos por nodo), $d$ = profundidad de la solución (aristas en el camino más corto a la meta), $m$ = profundidad máxima del grafo ($m \geq d$). El tiempo de IDDFS es el **total acumulado de todas las pasadas** — no el de una sola pasada con límite $d$.
+Donde: $b$ = factor de ramificación (**máximo** de vecinos por nodo; peor caso), $d$ = profundidad de la solución (aristas en el camino más corto a la meta), $m$ = profundidad máxima del grafo ($m \geq d$). El tiempo de IDDFS es el **total acumulado de todas las pasadas** — no el de una sola pasada con límite $d$.
 
 ---
 

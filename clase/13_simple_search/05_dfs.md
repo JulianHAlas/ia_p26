@@ -296,9 +296,13 @@ Comparación directa con `ColaDeFrontera`:
 
 Al igual que BFS, cada nodo entra y sale de la frontera a lo sumo una vez: $O(V + E)$.
 
-En términos de $b$ y $m$ (profundidad máxima del grafo):
+En términos del **factor de ramificación** $b$ (**número máximo** de vecinos de cualquier nodo) y $m$ (profundidad máxima del grafo):
 
 $$T_{\text{DFS}} = O(b^m)$$
+
+En el peor caso, DFS puede explorar hasta $b^m$ nodos — el árbol completo hasta profundidad $m$ — antes de encontrar (o no encontrar) la solución. Cada nodo tiene *a lo sumo* $b$ vecinos, y hay *a lo sumo* $m$ niveles.
+
+> **Nota sobre $b$ máximo vs. promedio:** con $b = b_{max}$ esta es una cota de peor caso. Si el grafo es irregular y la mayoría de nodos tienen menos de $b_{max}$ vecinos, el número real de nodos explorados será menor — pero $O(b^m)$ sigue siendo válido como garantía superior.
 
 Nota importante: si $m \gg d$ (la profundidad máxima es mucho mayor que la profundidad de la solución), DFS puede ser mucho más lento que BFS en el peor caso. BFS garantiza no explorar más allá del nivel $d$; DFS puede bajar hasta el fondo del grafo antes de encontrar la solución.
 
@@ -309,7 +313,7 @@ Esta es la diferencia más importante entre DFS y BFS, y vale la pena entenderla
 **¿Por qué la pila de DFS solo necesita $O(bm)$?** En cualquier momento, la pila contiene únicamente:
 
 1. **El camino activo**: los nodos desde la raíz hasta el nodo que se está expandiendo ahora — como máximo $m$ nodos (uno por nivel).
-2. **Los hermanos pendientes de cada nodo en el camino**: los vecinos que aún no se han explorado. En cada nivel hay como máximo $b-1$ hermanos pendientes.
+2. **Los hermanos pendientes de cada nodo en el camino**: los vecinos que aún no se han explorado. En cada nivel hay como máximo $b-1$ hermanos pendientes ($b$ = número máximo de vecinos).
 
 En total: $(b-1) \times m + 1 \approx b \times m$ nodos. En cualquier instante, la pila tiene esta forma:
 
@@ -524,7 +528,7 @@ DFS puede detectar ciclos: si durante la exploración encontramos un nodo que ya
 | Completo | Sí (finito + explorado) | No en grafos infinitos |
 | Óptimo | **No** | Puede encontrar camino largo antes del corto |
 
-Recordatorio de notación: $b$ = factor de ramificación (vecinos por nodo), $d$ = profundidad de la solución, $m$ = profundidad máxima del grafo ($m \geq d$, puede ser $\gg d$). Definidos en [03 — Algoritmo genérico →](03_busqueda_generica.md).
+Recordatorio de notación: $b$ = factor de ramificación (**máximo** de vecinos por nodo; peor caso), $d$ = profundidad de la solución, $m$ = profundidad máxima del grafo ($m \geq d$, puede ser $\gg d$). Definidos en [03 — Algoritmo genérico →](03_busqueda_generica.md).
 
 ---
 

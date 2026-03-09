@@ -310,9 +310,27 @@ Los capítulos siguientes analizan la complejidad de BFS, DFS e IDDFS usando tre
 
 | Símbolo | Nombre | Significado | Ejemplo |
 |:-------:|--------|-------------|---------|
-| $b$ | **Factor de ramificación** (*branching factor*) | Número promedio de vecinos de cada nodo — cuántas opciones hay en cada paso | En un laberinto de cuadrícula: $b = 4$ (arriba, abajo, izquierda, derecha). En ajedrez: $b \approx 35$. |
+| $b$ | **Factor de ramificación** (*branching factor*) | **Número máximo** de vecinos de cualquier nodo — cuántas opciones hay como máximo en cada paso | En una cuadrícula: $b = 4$ (exacto, todos los nodos tienen 4 vecinos). En ajedrez: $b \approx 35$ (promedio usado como estimación del máximo práctico). |
 | $d$ | **Profundidad de la solución** (*depth of solution*) | Número de aristas en el camino más corto desde el inicio hasta la meta | Si la solución es `A→B→D→F`, entonces $d = 3$. |
 | $m$ | **Profundidad máxima del grafo** (*maximum depth*) | La rama más larga posible del grafo. Puede ser mucho mayor que $d$ o incluso infinito. | Un grafo con ciclos sin conjunto explorado tendría $m = \infty$. |
+
+:::example{title="¿$b$ es el máximo o el promedio? ¿Importa para Big-O?"}
+
+Depende de lo que quieras garantizar:
+
+| Usando $b$ como... | $O(b^d)$ significa... | Válido como... |
+|---|---|---|
+| **máximo** de vecinos | cota superior garantizada — nunca explorarás más nodos | análisis de **peor caso** ✓ |
+| **promedio** de vecinos | número esperado de nodos — estimación práctica | análisis de **caso promedio** |
+
+**Cuando el grafo es uniforme** (todos los nodos tienen el mismo número de vecinos, como una cuadrícula 4-conexa o un árbol binario), máximo = promedio y la distinción desaparece.
+
+**Cuando el grafo es irregular** (algunos nodos tienen 2 vecinos, otros tienen 20), hay dos opciones:
+- Usar $b = b_{max}$ → Big-O es una cota de peor caso, pero puede sobreestimar mucho si la mayoría de nodos tienen pocos vecinos.
+- Usar $b = b_{avg}$ → Big-O es una estimación más realista, pero ya no es un peor caso garantizado.
+
+En los análisis de este módulo usamos $b = b_{max}$ para que las cotas $O(b^d)$, $O(b^m)$ y $O(bd)$ sean garantías válidas en el peor caso. Cuando un ejercicio dice "la cuadrícula tiene $b=4$" o "ajedrez tiene $b=35$" está usando el máximo práctico (o el exacto en grafos regulares).
+:::
 
 **¿Por qué importa la diferencia entre $d$ y $m$?**
 
