@@ -2,6 +2,12 @@
 title: "Búsqueda en amplitud (BFS)"
 ---
 
+| Notebook | Colab |
+|---------|:-----:|
+| Notebook 02 — Búsqueda (BFS, DFS e IDDFS en Python) | <a href="https://colab.research.google.com/github/sonder-art/ia_p26/blob/main/clase/13_simple_search/notebooks/02_busqueda.ipynb" target="_blank"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> |
+
+---
+
 # Búsqueda en amplitud (BFS)
 
 > *"The most important single aspect of software development is to be clear about what you are trying to build."*
@@ -15,17 +21,19 @@ BFS es `busqueda_generica` con `frontera = ColaDeFrontera`. Eso es todo. El rest
 
 ## 1. Intuición: ondas en el agua
 
-Imagina que lanzas una piedra a un estanque. Las ondas se expanden de forma concéntrica: primero el anillo a distancia 1, luego distancia 2, luego 3, etc. BFS funciona exactamente así.
+**¿Para qué sirve BFS?** Úsalo cuando necesitas el **camino más corto** entre dos puntos — el que tiene menos pasos, no el más rápido en tiempo ni el más barato en costo, sino el que pasa por menos aristas. Ejemplos concretos: encontrar cuántos clics separan dos páginas web, calcular los grados de separación entre dos personas en una red social, o encontrar la ruta con menos intersecciones en un mapa de calles.
+
+La razón por la que BFS garantiza eso está en su estrategia de exploración. Imagina que lanzas una piedra a un estanque. Las ondas se expanden de forma concéntrica: primero el anillo a distancia 1, luego distancia 2, luego 3, etc. BFS funciona exactamente así.
 
 Empezando desde el nodo inicial, BFS visita **todos los nodos a distancia 1**, luego **todos a distancia 2**, y así sucesivamente. Nunca avanza al nivel $k+1$ mientras queden nodos sin visitar en el nivel $k$.
 
-La consecuencia directa: **BFS siempre encuentra el camino más corto** (en número de aristas) al nodo objetivo.
+La consecuencia directa: **BFS siempre encuentra el camino más corto** (en número de aristas) al nodo objetivo. El precio es la memoria: en el peor caso tiene que guardar todo un nivel antes de pasar al siguiente.
 
 ---
 
 ## 2. En lenguaje natural
 
-Antes de ver código:
+La pregunta que BFS responde es: *"¿cuál es el camino de menos pasos del nodo A al nodo B?"* El truco es procesar siempre el nodo que lleva **más tiempo esperando** — así los nodos cercanos salen antes que los lejanos, y el primero que llega a la meta lo hace por el camino más corto.
 
 1. Crea una **cola** (FIFO) con el nodo inicial.
 2. Mientras la cola no esté vacía:

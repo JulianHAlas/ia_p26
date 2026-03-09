@@ -2,6 +2,12 @@
 title: "Búsqueda en profundidad (DFS)"
 ---
 
+| Notebook | Colab |
+|---------|:-----:|
+| Notebook 02 — Búsqueda (BFS, DFS e IDDFS en Python) | <a href="https://colab.research.google.com/github/sonder-art/ia_p26/blob/main/clase/13_simple_search/notebooks/02_busqueda.ipynb" target="_blank"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> |
+
+---
+
 # Búsqueda en profundidad (DFS)
 
 > *"In order to understand recursion, one must first understand recursion."*
@@ -14,13 +20,17 @@ DFS es `busqueda_generica` con `frontera = PilaDeFrontera`. La diferencia respec
 
 ## 1. Intuición: explorar hasta el fondo antes de volver
 
-Imagina que estás explorando un laberinto. La estrategia DFS es: siempre avanza por el pasillo más reciente que descubriste. Si llegas a un callejón sin salida, *retroce* (*backtrack*) al punto donde tomaste el último desvío y prueba el siguiente.
+**¿Para qué sirve DFS?** Úsalo cuando quieres **explorar exhaustivamente** — no te importa encontrar el camino más corto, sino encontrar *algún* camino, o explorar todas las posibilidades, o verificar si algo existe. Ejemplos concretos: listar todos los archivos dentro de una carpeta (y sus subcarpetas, y las subcarpetas de las subcarpetas...), resolver un Sudoku probando combinaciones y deshaciendo cuando llegas a una contradicción, o calcular el orden en que instalar dependencias de software. En todos estos casos lo que importa es ir hasta el fondo de una posibilidad antes de considerar la siguiente.
 
-DFS **va tan profundo como puede** en una rama antes de considerar ramas alternativas. El resultado: puede encontrar la solución rápido si está en la rama que elige primero, o puede explorar un laberinto enorme antes de encontrarla si eligió mal.
+La estrategia es directa: imagina que estás explorando un laberinto. DFS dice: siempre avanza por el pasillo **más reciente** que descubriste. Si llegas a un callejón sin salida, *retrocede* (*backtrack*) al punto donde tomaste el último desvío y prueba el siguiente pasillo.
+
+DFS **va tan profundo como puede** en una rama antes de considerar ramas alternativas. El resultado: puede encontrar la solución rápido si está en la rama que elige primero, o puede explorar muchos caminos muertos antes de encontrarla si eligió mal. Pero su gran ventaja es la **memoria**: solo necesita recordar el camino actual, no todo el grafo explorado hasta el momento.
 
 ---
 
 ## 2. En lenguaje natural
+
+La pregunta que DFS responde es: *"¿existe algún camino del nodo A al nodo B, y si es así cuál?"* (o más generalmente: *"¿qué nodos puedo alcanzar desde A?"*). No se preocupa por si es el más corto — eso es trabajo de BFS. El truco es procesar siempre el nodo que llegó **más recientemente** a la frontera, lo que hace que el algoritmo se entierre en una rama antes de probar otras.
 
 1. Crea una **pila** (LIFO) con el nodo inicial.
 2. Mientras la pila no esté vacía:
@@ -98,25 +108,83 @@ Modifica el grafo: añade la arista $\{A, F\}$ directamente. Ahora el camino óp
 
 ## 5. DFS y la recursión
 
-DFS tiene una implementación recursiva elegante que muestra por qué la pila es natural:
+Hemos visto DFS como `busqueda_generica` con una `PilaDeFrontera`. Pero hay otra forma de escribir exactamente el mismo algoritmo que muchos programadores encuentran aún más natural: la versión **recursiva**. Antes de ver el código, conviene entender *por qué* la recursión aparece aquí de forma tan natural.
+
+### La idea: la pila ya existe — es el call stack
+
+Cuando una función se llama a sí misma en Python, el intérprete guarda el estado de la llamada actual (variables locales, punto de retorno) en una estructura interna llamada **call stack** o pila de llamadas. Esa pila crece cuando hacemos una llamada recursiva y decrece cuando retornamos.
+
+¿Suena familiar? Es exactamente lo que hace `PilaDeFrontera`. En la versión iterativa *nosotros* construimos y gestionamos la pila explícitamente. En la versión recursiva *dejamos que Python lo haga por nosotros* usando su propio call stack. La pila del sistema **es** la frontera de DFS — no es una metáfora, es literalmente la misma estructura.
+
+### ¿Cómo difiere del algoritmo genérico?
+
+La versión recursiva **no es** `busqueda_generica` con una frontera distinta. Es una reorganización del mismo comportamiento que elimina la frontera explícita y el bucle `while`, sustituyéndolos por el mecanismo de llamada y retorno del propio lenguaje. Lo que cambia:
+
+| `busqueda_generica` + `PilaDeFrontera` | `dfs_recursivo` |
+|---|---|
+| Bucle `while` que saca de la pila | Llamada recursiva que avanza un nivel |
+| `push` añade a la pila explícita | La propia llamada apila el estado |
+| `pop` retira de la pila explícita | El `return` desapila el estado |
+| `frontera.contains(vecino)` evita duplicados | No hay `frontera`; solo se revisa `explorado` |
+
+Nota que la versión recursiva no chequea si el vecino está "en la frontera" antes de añadirlo — simplemente comprueba `explorado`. Esto es seguro porque la recursión nunca tiene varios caminos al mismo nodo en cola al mismo tiempo: siempre estamos *en un único camino* y retrocedemos por él.
+
+### El código, línea a línea
 
 ```python
 def dfs_recursivo(problema, nodo, explorado, padre):
+    # Caso base 1: llegamos a la meta → reconstruir y devolver el camino
     if problema.es_meta(nodo):
         return reconstruir_camino(padre, nodo)
+
+    # Marcar nodo como explorado antes de visitar vecinos
     explorado.add(nodo)
+
     for vecino in problema.vecinos(nodo):
-        if vecino not in explorado:
-            padre[vecino] = nodo
+        if vecino not in explorado:          # ¿ya lo procesamos? → saltar
+            padre[vecino] = nodo             # registrar de dónde venimos
             resultado = dfs_recursivo(problema, vecino, explorado, padre)
-            if resultado is not None:
-                return resultado
+            #           ↑ aquí ocurre el "push": Python apila el estado actual
+            #             y empieza a procesar el vecino desde cero
+
+            if resultado is not None:        # ¿el vecino (o algún descendiente) encontró la meta?
+                return resultado             # propagar hacia arriba: "desapilar con éxito"
+
+    # Caso base 2: ningún vecino llevó a la meta → backtrack
     return None
+    # ↑ este return hace pop implícito: Python restaura el estado de quien nos llamó
+    #   y continuará con el siguiente vecino en el bucle for de arriba
 ```
 
-La **pila del sistema** (call stack de la recursión) *es* la frontera de DFS. Cada llamada recursiva corresponde a apilar un nodo; el retorno corresponde a hacer pop. Son exactamente la misma idea.
+### Traza en el grafo de ejemplo
 
-La versión iterativa que usamos (con `PilaDeFrontera`) es equivalente pero más explícita — y evita el riesgo de desbordamiento de pila (*stack overflow*) en grafos muy profundos.
+Usando el mismo grafo $A-B-D-F$ de las secciones anteriores, la recursión funciona así:
+
+```
+dfs_recursivo(A)          ← "apilar A"
+  dfs_recursivo(B)        ← "apilar B" (primer vecino no explorado de A)
+    dfs_recursivo(D)      ← "apilar D"
+      dfs_recursivo(F)    ← "apilar F"
+        F es la meta → return camino   ← "desapilar con éxito"
+      ← propaga resultado
+    ← propaga resultado
+  ← propaga resultado
+← devuelve camino: [A, B, D, F]
+```
+
+Cada nivel de indentación es un frame en el call stack. La profundidad máxima de la recursión es exactamente la profundidad máxima del grafo — lo mismo que el tamaño máximo de `PilaDeFrontera`.
+
+### Versión iterativa vs. recursiva
+
+Ambas implementaciones son equivalentes en comportamiento. La elección es práctica:
+
+| | Recursiva | Iterativa (`PilaDeFrontera`) |
+|---|---|---|
+| **Claridad** | Muy concisa, expresa la idea directamente | Más explícita, más cercana al algoritmo genérico |
+| **Riesgo** | *Stack overflow* en grafos muy profundos (límite ~1000 frames en Python) | Sin límite de profundidad (solo memoria del heap) |
+| **Generalización** | Difícil de convertir en `busqueda_generica` | Encaja directamente en el framework |
+
+En este módulo usamos la versión iterativa porque encaja en `busqueda_generica` y evita el riesgo de desbordamiento. La versión recursiva es útil para entender la intuición y para grafos que se sabe que son poco profundos.
 
 ---
 
@@ -223,40 +291,158 @@ DFS **no es óptimo**. Puede encontrar un camino largo antes de descubrir uno co
 
 ### Encontrar componentes conexas
 
-Para verificar si un grafo es conexo, o para encontrar todas sus componentes conexas, DFS es la herramienta natural:
+Imagina que tienes un grafo desconectado — por ejemplo, una red de ciudades donde algunas ciudades no tienen carretera entre sí. Quieres saber cuántos grupos de ciudades existen y cuáles pertenecen a cada grupo. Eso es encontrar las **componentes conexas**: los subgrafos dentro de los cuales puedes moverte entre cualquier par de nodos.
+
+La idea es simple: arranca DFS desde cualquier nodo sin visitar. DFS llegará a *exactamente* todos los nodos que son alcanzables desde ahí — eso es una componente. Luego busca el siguiente nodo que todavía no hayas visitado y repite. Cada DFS nuevo descubre una componente distinta.
+
+#### ¿Cómo se relaciona con `busqueda_generica`?
+
+Esta función **no usa** `busqueda_generica` porque el objetivo es distinto: aquí no buscamos una meta, queremos recorrer *todo* el grafo. Pero el mecanismo interno del DFS por componente es idéntico al de `PilaDeFrontera`: una pila local, `pop()` para sacar el nodo más reciente, y un set de visitados para no repetir. La diferencia es que en lugar de parar al encontrar la meta, continuamos hasta que la pila se vacía — y entonces sabemos que terminamos una componente.
+
+| `busqueda_generica` + `PilaDeFrontera` | `componentes_conexas` (DFS interno) |
+|---|---|
+| Busca un nodo meta específico | Recorre todos los nodos alcanzables |
+| Para al encontrar la meta | Para cuando la pila se vacía |
+| Devuelve un camino | Devuelve la lista de nodos de la componente |
+| Un solo DFS | Un DFS por componente, en bucle externo |
+
+#### El código, línea a línea
 
 ```python
 def componentes_conexas(grafo):
-    visitado = set()
-    componentes = []
-    for nodo in grafo:
-        if nodo not in visitado:
-            # Nueva componente: DFS desde este nodo
-            componente = []
-            pila = [nodo]
-            while pila:
-                v = pila.pop()
-                if v not in visitado:
-                    visitado.add(v)
-                    componente.append(v)
+    visitado = set()    # nodos ya asignados a alguna componente — nunca volver a ellos
+    componentes = []    # lista de listas: cada sublista es una componente
+
+    for nodo in grafo:                   # recorremos todos los nodos del grafo
+        if nodo not in visitado:         # ¿ya lo procesamos? → pertenece a una componente anterior, saltar
+                                         # si no fue visitado → es el punto de entrada de una nueva componente
+
+            componente = []              # acumular nodos de esta componente
+            pila = [nodo]                # ← inicio del DFS: la pila con el nodo semilla
+
+            while pila:                  # mientras queden nodos pendientes en esta componente
+                v = pila.pop()           # sacar el más reciente — LIFO, igual que PilaDeFrontera
+
+                if v not in visitado:    # puede que v fue añadido a la pila varias veces antes de procesarse
+                    visitado.add(v)      # marcarlo como procesado
+                    componente.append(v) # registrar que pertenece a esta componente
+
                     for vecino in grafo[v]:
-                        if vecino not in visitado:
-                            pila.append(vecino)
-            componentes.append(componente)
-    return componentes
+                        if vecino not in visitado:   # solo añadir vecinos no visitados
+                            pila.append(vecino)      # ← "push": exploraremos este vecino luego
+
+            componentes.append(componente)   # DFS terminó: guardamos la componente completa
+
+    return componentes   # lista de todas las componentes encontradas
 ```
+
+#### Traza en un ejemplo
+
+Supón el grafo: $\{A-B, B-C, D-E\}$ — dos componentes: $\{A,B,C\}$ y $\{D,E\}$.
+
+```
+Iteración 1 (nodo=A, no visitado):
+  pila=[A]
+  pop A → visitado={A}, componente=[A], push B
+  pila=[B]
+  pop B → visitado={A,B}, componente=[A,B], push A (ignorado), push C
+  pila=[C]
+  pop C → visitado={A,B,C}, componente=[A,B,C], sin vecinos nuevos
+  pila=[] → componentes=[[A,B,C]]
+
+Iteración 2 (nodo=B, ya visitado → saltar)
+Iteración 3 (nodo=C, ya visitado → saltar)
+
+Iteración 4 (nodo=D, no visitado):
+  pila=[D]
+  pop D → visitado={A,B,C,D}, componente=[D], push E
+  pop E → visitado={A,B,C,D,E}, componente=[D,E]
+  pila=[] → componentes=[[A,B,C],[D,E]]
+```
+
+El bucle externo garantiza que ningún nodo quede sin clasificar, aunque el grafo esté completamente desconectado.
+
+### Exploración de sistemas de archivos
+
+Una de las aplicaciones más cotidianas de DFS es **recorrer un árbol de directorios** — lo que hace el comando `find` en Linux, o `os.walk` en Python. Cuando pides "lista todos los archivos dentro de esta carpeta", el sistema entra en la primera subcarpeta, luego en la primera subcarpeta de esa, y así hasta llegar a un directorio sin más subdirectorios. Solo entonces retrocede y explora el siguiente hermano. Eso es DFS.
+
+Considera este árbol de directorios:
+
+```
+proyecto/
+├── src/
+│   ├── main.py
+│   └── utils/
+│       ├── io.py
+│       └── math.py
+├── tests/
+│   └── test_main.py
+└── README.md
+```
+
+DFS recorre esto en orden: `proyecto → src → main.py → utils → io.py → math.py → tests → test_main.py → README.md`. Entra en `src` completamente antes de siquiera mirar `tests`. BFS haría lo contrario: primero vería todos los elementos del nivel 1 (`src`, `tests`, `README.md`), luego todos los del nivel 2 (`main.py`, `utils`, `test_main.py`), etc.
+
+Formulación como grafo de búsqueda:
+- **Nodos**: directorios y archivos
+- **Aristas**: relación "contiene" (padre → hijo)
+- **Meta**: no hay — queremos visitar todo
+- **¿Por qué DFS y no BFS?** Porque queremos agrupar el contenido por rama (todo lo de `src` junto), y porque el árbol puede ser muy profundo pero no muy ancho — DFS usa $O(bm)$ memoria, BFS usaría $O(b^d)$.
+
+```python
+import os
+
+def listar_archivos_dfs(ruta_raiz):
+    """Recorre un árbol de directorios en profundidad (DFS iterativo)."""
+    archivos = []
+    pila = [ruta_raiz]           # empezamos con la raíz
+
+    while pila:
+        ruta = pila.pop()        # el más reciente — LIFO
+
+        if os.path.isfile(ruta):
+            archivos.append(ruta)   # es un archivo: registrarlo
+        else:
+            # es un directorio: apilar sus hijos (en orden inverso para procesar alfabéticamente)
+            hijos = sorted(os.listdir(ruta), reverse=True)
+            for hijo in hijos:
+                pila.append(os.path.join(ruta, hijo))
+
+    return archivos
+```
+
+La traza en el árbol de ejemplo:
+
+```
+pila inicial: [proyecto/]
+pop proyecto/ → es dir → push [README.md, tests/, src/]
+pop src/      → es dir → push [utils/, main.py]
+pop main.py   → es archivo → archivos=[main.py]
+pop utils/    → es dir → push [math.py, io.py]
+pop io.py     → es archivo → archivos=[main.py, io.py]
+pop math.py   → es archivo → archivos=[main.py, io.py, math.py]
+pop tests/    → es dir → push [test_main.py]
+pop test_main.py → archivos=[..., test_main.py]
+pop README.md    → archivos=[..., README.md]
+```
+
+Todo el contenido de `src/` aparece junto, antes de pasar a `tests/`. Eso es exactamente lo que esperamos de DFS.
+
+### Resolución de dependencias
+
+Cuando instalas un paquete con `pip install` o `npm install`, el gestor de paquetes necesita instalar primero las dependencias de las dependencias antes de instalar el paquete en sí. Eso es un **orden topológico**, y DFS lo calcula naturalmente.
+
+Si el paquete A depende de B y C, y B depende de D:
+
+```
+A → B → D
+A → C
+```
+
+DFS desde A visita: A, luego B, luego D (instala D primero porque no tiene dependencias), regresa a B (instala B), regresa a A, visita C (instala C), finalmente instala A. El orden de instalación es `D, B, C, A` — exactamente el orden topológico inverso al orden en que DFS *termina* de procesar cada nodo.
 
 ### Detección de ciclos
 
-DFS puede detectar ciclos: si durante la exploración encontramos un nodo que ya está en el camino actual (en la pila), hay un ciclo.
-
-### Exploración de laberintos
-
-La estrategia de explorar hasta el fondo y retroceder es exactamente cómo un humano exploraría un laberinto físico con la regla "sigue la pared derecha". DFS captura esta intuición de forma natural.
-
-### Ordenamiento topológico (preview)
-
-DFS tiene una propiedad útil: el orden en que los nodos *terminan de procesarse* (al hacer pop) es el inverso del **orden topológico** de un grafo dirigido acíclico (DAG). Esto tiene muchas aplicaciones en compiladores, schedulers de tareas, y análisis de dependencias.
+DFS puede detectar ciclos: si durante la exploración encontramos un nodo que ya está **en el camino actual** (en la pila activa, no solo en `explorado`), hay un ciclo. Esto es útil para detectar dependencias circulares — el caso donde A depende de B y B depende de A — que harían imposible instalar cualquiera de los dos.
 
 ---
 
@@ -269,6 +455,49 @@ DFS tiene una propiedad útil: el orden en que los nodos *terminan de procesarse
 | Espacio | $O(bm)$ | Solo un camino + hermanos en memoria |
 | Completo | Sí (finito + explorado) | No en grafos infinitos |
 | Óptimo | **No** | Puede encontrar camino largo antes del corto |
+
+---
+
+## ¿DFS o BFS? Cómo elegir
+
+La elección entre DFS y BFS no es arbitraria — cada uno está diseñado para un tipo de pregunta distinto. Aquí está la guía práctica.
+
+### Usa BFS cuando la pregunta es: *"¿cuál es el camino más corto?"*
+
+BFS garantiza encontrar el camino con el menor número de pasos. Si eso es lo que necesitas, no hay discusión.
+
+| Problema real | ¿Por qué BFS? |
+|---|---|
+| **GPS / mapas**: encontrar la ruta con menos intersecciones entre dos puntos | BFS encuentra el camino de menor número de aristas — cada intersección es un nodo |
+| **6 grados de separación**: ¿cuántas conexiones separan a dos personas en LinkedIn? | BFS da la distancia exacta desde un nodo a todos los demás |
+| **Videojuego**: ¿cuál es el mínimo de movimientos para resolver un puzzle? | BFS expande nivel a nivel — el primero que llega a la meta lo hace en el mínimo de pasos |
+| **Flood fill en Paint**: colorear todos los píxeles conectados del mismo color | BFS expande la región como una onda — garantiza alcanzar todos los píxeles conectados |
+
+La limitación de BFS es la **memoria**: tiene que guardar en la cola todos los nodos del nivel actual. Para grafos muy profundos o con factor de ramificación alto, esto se vuelve impracticable.
+
+### Usa DFS cuando la pregunta es: *"¿existe algún camino?"* o *"¿cuáles son todos los X?"*
+
+DFS no garantiza el camino más corto, pero usa mucha menos memoria y es la herramienta natural para exploración exhaustiva y backtracking.
+
+| Problema real | ¿Por qué DFS? |
+|---|---|
+| **`find` / `os.walk`**: listar todos los archivos dentro de una carpeta recursivamente | DFS recorre ramas completas antes de pasar a la siguiente — agrupa por directorio |
+| **Resolver Sudoku**: probar un número, continuar, y deshacer si hay contradicción | DFS con backtracking — cuando falla, hace `pop` y prueba el siguiente valor |
+| **Orden de instalación de paquetes**: instalar dependencias antes que el paquete que las necesita | DFS da el orden topológico natural — los nodos sin dependencias se procesan primero |
+| **Detectar ciclos**: ¿hay dependencias circulares en un proyecto? | DFS detecta si un nodo aparece en su propio camino activo |
+| **Componentes conexas**: ¿cuántos grupos de ciudades están conectados entre sí? | DFS desde cada nodo no visitado descubre exactamente su componente |
+
+La limitación de DFS es que **no es óptimo**: puede encontrar un camino largo antes que uno corto, simplemente por el orden en que elige los vecinos.
+
+### La regla de oro
+
+```
+¿Necesitas el camino MÁS CORTO?          → BFS
+¿Necesitas CUALQUIER camino / explorar TODO?  → DFS
+¿Necesitas ambas cosas con poca memoria?      → IDDFS (siguiente sección)
+```
+
+Si tienes dudas, pregúntate: *"¿me importaría que el camino encontrado tenga más pasos de los necesarios?"* Si la respuesta es sí, usa BFS. Si no, DFS es suficiente y más eficiente en memoria.
 
 ---
 

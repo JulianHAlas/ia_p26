@@ -2,6 +2,12 @@
 title: "Grafos: fundamentos"
 ---
 
+| Notebook | Colab |
+|---------|:-----:|
+| Notebook 01 — Grafos (práctica de esta sección) | <a href="https://colab.research.google.com/github/sonder-art/ia_p26/blob/main/clase/13_simple_search/notebooks/01_grafos.ipynb" target="_blank"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> |
+
+---
+
 # Grafos: fundamentos
 
 > *"A mathematician, like a painter or a poet, is a maker of patterns."*

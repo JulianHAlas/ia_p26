@@ -2,6 +2,12 @@
 title: "Algoritmo genérico de búsqueda"
 ---
 
+| Notebook | Colab |
+|---------|:-----:|
+| Notebook 02 — Búsqueda (BFS, DFS e IDDFS en Python) | <a href="https://colab.research.google.com/github/sonder-art/ia_p26/blob/main/clase/13_simple_search/notebooks/02_busqueda.ipynb" target="_blank"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> |
+
+---
+
 # Algoritmo genérico de búsqueda
 
 > *"A good notation has a subtlety and suggestiveness which at times make it seem almost like a live teacher."*

@@ -2,6 +2,12 @@
 title: "IDDFS y comparación"
 ---
 
+| Notebook | Colab |
+|---------|:-----:|
+| Notebook 02 — Búsqueda (BFS, DFS e IDDFS en Python) | <a href="https://colab.research.google.com/github/sonder-art/ia_p26/blob/main/clase/13_simple_search/notebooks/02_busqueda.ipynb" target="_blank"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> |
+
+---
+
 # IDDFS y comparación de algoritmos
 
 > *"The best of both worlds."*
