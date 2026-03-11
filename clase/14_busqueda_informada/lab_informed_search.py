@@ -1125,12 +1125,31 @@ _TOY_H = {'S': 7, 'A': 5, 'B': 4, 'C': 3, 'G': 0}
 
 
 def _draw_toy_step(ax, current, frontier_nodes, explored_nodes,
-                   node_labels, title, solution_path=None, note=None):
-    """Draw one step of a search algorithm on the shared toy graph."""
+                   node_g, title, solution_path=None, note=None):
+    """Draw one step of a search algorithm on the shared toy graph.
+
+    node_g: dict {node: g_value} for nodes with a known g cost.
+            Nodes absent from this dict are shown with h(n) only.
+    Labels always show g, h, AND f for every discovered node so all
+    three algorithms can be compared directly on the same values.
+    """
     pos = _TOY_POS
     R = 0.42
     sol = solution_path or []
     sol_set = set(sol)
+
+    # --- Build node label strings ---
+    # Discovered nodes: "g=X  h=Y\nf=X+Y=Z"
+    # Undiscovered nodes: "h=Y"  (h is always known — domain knowledge)
+    node_labels = {}
+    for n in pos:
+        hval = _TOY_H[n]
+        gval = node_g.get(n, None)
+        if gval is not None:
+            fval = gval + hval
+            node_labels[n] = f"g={gval}  h={hval}\nf={gval}+{hval}={fval}"
+        else:
+            node_labels[n] = f"h={hval}"
 
     # --- Directed edges (arrows) ---
     for u, v, w in _TOY_EDGES_W:
@@ -1148,7 +1167,6 @@ def _draw_toy_step(ax, current, frontier_nodes, explored_nodes,
         ax.annotate("", xy=(xe, ye), xytext=(xs, ys),
                     arrowprops=dict(arrowstyle="-|>", color=ec, lw=ew,
                                    mutation_scale=12 + 5 * on_sol))
-        # Weight label — offset perpendicularly from edge midpoint
         mx = p0[0] * 0.4 + p1[0] * 0.6
         my = p0[1] * 0.4 + p1[1] * 0.6
         ox, oy = -dy / d * 0.28, dx / d * 0.28
@@ -1156,7 +1174,7 @@ def _draw_toy_step(ax, current, frontier_nodes, explored_nodes,
                 fontsize=8.5, fontweight='bold', color="#333333",
                 bbox=dict(fc='white', ec='none', boxstyle='round,pad=0.1'))
 
-    # --- Node circles ---
+    # --- Node circles + labels ---
     for n, (x, y) in pos.items():
         if n == current:
             fc, ec, ew = COLORS["orange"], COLORS["dark"], 3.0
@@ -1173,69 +1191,81 @@ def _draw_toy_step(ax, current, frontier_nodes, explored_nodes,
                 fontweight='bold', color=tc, zorder=4)
         lbl = node_labels.get(n, '')
         if lbl:
-            ax.text(x, y - 0.62, lbl, ha='center', va='top', fontsize=7.5,
-                    color=COLORS["dark"], zorder=4)
+            ax.text(x, y - 0.62, lbl, ha='center', va='top', fontsize=7.0,
+                    color=COLORS["dark"], zorder=4, linespacing=1.35)
 
     if note:
-        ax.text(3.75, -0.35, note, ha='center', va='top', fontsize=7.5,
+        ax.text(3.75, -0.40, note, ha='center', va='top', fontsize=7.5,
                 color=COLORS["dark"],
                 bbox=dict(fc='#FDFEFE', ec=COLORS["gray"],
                           boxstyle='round,pad=0.35', lw=0.8))
 
     ax.set_xlim(-0.7, 8.2)
-    ax.set_ylim(-1.2, 4.8)
+    ax.set_ylim(-1.5, 4.8)
     ax.set_aspect('equal')
     ax.axis('off')
     ax.set_title(title, fontsize=9, pad=4)
 
 
 def plot_greedy_step_by_step() -> None:
-    """6-panel step-by-step trace of Greedy on the toy graph."""
-    # h labels always visible (h is domain knowledge, always known)
-    hl = {n: f"h={v}" for n, v in _TOY_H.items()}
-
+    """6-panel step-by-step trace of Greedy on the toy graph.
+    Shows g, h, and f at every node — even though Greedy only uses h.
+    The key visual: at step 2 Greedy picks B (h=4) over A (h=5),
+    but g(B)=4 > g(A)=1 and f(B)=8 > f(A)=6.  Greedy ignores g.
+    """
+    # g values along Greedy's chosen path:
+    #   Greedy discovers A and B from S (g via S→A=1, S→B=4)
+    #   Then picks B (h=4), discovers C from B (g via B→C = 5)
+    #   Then picks C (h=3), discovers G from C (g via B→C→G = 7)
+    #   A is discovered (g=1) but never expanded
     steps = [
-        # (current, frontier_set, explored_set, node_labels, title, solution_path, note)
+        # (current, frontier_set, explored_set, node_g, title, solution_path, note)
         (None,
-         {'S'}, set(), hl,
-         "Inicio\nFrontera: {S  (h=7)}",
+         {'S'}, set(),
+         {'S': 0},
+         "Inicio\nFrontera: {S}  —  g=0, h=7, f=7",
          None, None),
 
         ('S',
-         {'A', 'B'}, {'S'}, hl,
-         "Expande S (h=7)\nFrontera: {B(h=4), A(h=5)}",
+         {'A', 'B'}, {'S'},
+         {'S': 0, 'A': 1, 'B': 4},
+         "Expande S  [h=7]\nDescubre A(h=5) y B(h=4)",
          None, None),
 
         ('B',
-         {'A', 'C'}, {'S', 'B'}, hl,
-         "Expande B (h=4) — menor h!\nFrontera: {C(h=3), A(h=5)}",
+         {'A', 'C'}, {'S', 'B'},
+         {'S': 0, 'A': 1, 'B': 4, 'C': 5},
+         "Expande B  [h=4, menor h!]\nh(B)=4 < h(A)=5  —  Greedy elige B",
          None,
-         "h(B)=4 < h(A)=5  →  Greedy prefiere B\n(ignora que S→B cuesta 4 y S→A solo 1)"),
+         "g(B)=4 > g(A)=1 y f(B)=8 > f(A)=6  —  Greedy ignora g y f"),
 
         ('C',
-         {'A', 'G'}, {'S', 'B', 'C'}, hl,
-         "Expande C (h=3)\nFrontera: {G(h=0), A(h=5)}",
+         {'A', 'G'}, {'S', 'B', 'C'},
+         {'S': 0, 'A': 1, 'B': 4, 'C': 5, 'G': 7},
+         "Expande C  [h=3, menor h!]\nDescubre G (g=5+2=7, h=0, f=7)",
          None, None),
 
         ('G',
-         set(), {'S', 'B', 'C'}, hl,
-         "META: G (h=0)  —  camino hallado\nS→B→C→G  costo = 4+1+2 = 7",
+         set(), {'S', 'B', 'C'},
+         {'S': 0, 'A': 1, 'B': 4, 'C': 5, 'G': 7},
+         "META: G  —  camino hallado\nS->B->C->G  costo = 4+1+2 = 7",
          ['S', 'B', 'C', 'G'], None),
 
-        # Panel 6: A quedó en frontera — mostrar el error
         (None,
-         {'A'}, {'S', 'B', 'C', 'G'}, hl,
-         "A quedó en frontera sin expandirse\n(h=5 parecía peor que h(B)=4)",
+         {'A'}, {'S', 'B', 'C', 'G'},
+         {'S': 0, 'A': 1, 'B': 4, 'C': 5, 'G': 7},
+         "A quedo en frontera sin expandirse\n[h=5 parecia peor que h(B)=4]",
          ['S', 'B', 'C', 'G'],
-         "Camino optimo real: S→A→C→G  costo = 1+1+2 = 4\n"
-         "Greedy fallo: ignoro g(n) y eligio el camino mas costoso"),
+         "Camino optimo: S->A->C->G  costo=1+1+2=4  (vs 7 hallado)\n"
+         "g(A)=1 < g(B)=4 pero Greedy solo miro h"),
     ]
 
-    fig, axes = plt.subplots(2, 3, figsize=(15, 9))
+    fig, axes = plt.subplots(2, 3, figsize=(15, 9.5))
     fig.suptitle(
-        "Greedy best-first paso a paso  —  siempre expande el menor h(n)\n"
+        "Greedy best-first paso a paso  —  prioridad = h(n)  [ignora g]\n"
+        "Cada nodo muestra: g (costo pagado) | h (estimacion) | f = g+h\n"
         "[naranja] expandiendo  [azul] frontera  [verde] explorado  [gris] no visto",
-        fontsize=11, fontweight='bold')
+        fontsize=10, fontweight='bold')
     axes = axes.flatten()
 
     legend_patches = [
@@ -1244,64 +1274,68 @@ def plot_greedy_step_by_step() -> None:
         mpatches.Patch(color=COLORS["green"], label="Explorado"),
         mpatches.Patch(color=COLORS["light"], label="No visitado"),
     ]
-    for ax, (cur, fr, ex, lbl, ttl, sp, nt) in zip(axes, steps):
-        _draw_toy_step(ax, cur, fr, ex, lbl, ttl, sp, nt)
+    for ax, (cur, fr, ex, ng, ttl, sp, nt) in zip(axes, steps):
+        _draw_toy_step(ax, cur, fr, ex, ng, ttl, sp, nt)
 
     fig.legend(handles=legend_patches, loc='lower center', ncol=4,
-               fontsize=9, framealpha=0.9, bbox_to_anchor=(0.5, -0.02))
+               fontsize=9, framealpha=0.9, bbox_to_anchor=(0.5, -0.01))
     fig.tight_layout()
     _save(fig, "11_greedy_step_by_step.png")
 
 
 def plot_dijkstra_step_by_step() -> None:
-    """6-panel step-by-step trace of Dijkstra on the toy graph."""
-    # g labels only for nodes whose g is known
+    """6-panel step-by-step trace of Dijkstra on the toy graph.
+    Shows g, h, and f at every node — even though Dijkstra only uses g.
+    The key visual: Dijkstra correctly expands A (g=1) before B (g=4),
+    but also expands B, ignoring h values entirely.
+    """
     steps = [
-        # (current, frontier_set, explored_set, node_labels, title, solution_path, note)
+        # (current, frontier_set, explored_set, node_g, title, solution_path, note)
         (None,
          {'S'}, set(),
-         {'S': 'g=0'},
-         "Inicio\ng(S)=0  (resto desconocido)",
+         {'S': 0},
+         "Inicio\ng(S)=0  (h y f mostrados para comparar)",
          None, None),
 
         ('S',
          {'A', 'B'}, {'S'},
-         {'S': 'g=0', 'A': 'g=1', 'B': 'g=4'},
-         "Expande S (g=0)\nRelajacion: g[A]=0+1=1,  g[B]=0+4=4",
+         {'S': 0, 'A': 1, 'B': 4},
+         "Expande S  [g=0]\nRelajacion: g[A]=1,  g[B]=4",
          None, None),
 
         ('A',
          {'B', 'C', 'G'}, {'S', 'A'},
-         {'S': 'g=0', 'A': 'g=1', 'B': 'g=4', 'C': 'g=2', 'G': 'g=11'},
-         "Expande A (g=1) — menor g!\nRelajacion: g[C]=1+1=2,  g[G]=1+10=11",
+         {'S': 0, 'A': 1, 'B': 4, 'C': 2, 'G': 11},
+         "Expande A  [g=1, menor g!]\nRelajacion: g[C]=2,  g[G]=11",
          None, None),
 
         ('C',
          {'B', 'G'}, {'S', 'A', 'C'},
-         {'S': 'g=0', 'A': 'g=1', 'B': 'g=4', 'C': 'g=2', 'G': 'g=4'},
-         "Expande C (g=2)\nRelajacion: g[G]: 11 → 2+2 = 4  !",
+         {'S': 0, 'A': 1, 'B': 4, 'C': 2, 'G': 4},
+         "Expande C  [g=2]\nRelajacion: g[G]: 11 -> 4  !",
          None,
-         "g[G] se actualiza: 11 → 4  (camino mas barato encontrado via C)"),
+         "g[G] se actualiza 11->4  (f[G]: 11->4)  via S->A->C->G"),
 
         ('B',
          {'G'}, {'S', 'A', 'C', 'B'},
-         {'S': 'g=0', 'A': 'g=1', 'B': 'g=4', 'C': 'g=2', 'G': 'g=4'},
-         "Expande B (g=4)\nB→C: g=4+1=5 > g[C]=2  —  sin relajacion",
+         {'S': 0, 'A': 1, 'B': 4, 'C': 2, 'G': 4},
+         "Expande B  [g=4]  —  Dijkstra NO usa h\nB->C: g=5 > g[C]=2, sin relajacion",
          None,
-         "C ya fue explorado con g=2 < 5  —  Dijkstra no retrocede"),
+         "h(B)=4 sugeria que B era prometedor — Dijkstra lo ignora y lo expande igual"),
 
         ('G',
          set(), {'S', 'A', 'C', 'B'},
-         {'S': 'g=0', 'A': 'g=1', 'B': 'g=4', 'C': 'g=2', 'G': 'g=4'},
-         "META: G (g=4)  —  camino optimo\nS→A→C→G  costo = 1+1+2 = 4",
+         {'S': 0, 'A': 1, 'B': 4, 'C': 2, 'G': 4},
+         "META: G  [g=4]  —  camino optimo\nS->A->C->G  costo = 1+1+2 = 4",
          ['S', 'A', 'C', 'G'], None),
     ]
 
-    fig, axes = plt.subplots(2, 3, figsize=(15, 9))
+    fig, axes = plt.subplots(2, 3, figsize=(15, 9.5))
     fig.suptitle(
-        "Dijkstra paso a paso  —  siempre expande el menor g(n)\n"
+        "Dijkstra paso a paso  —  prioridad = g(n)  [ignora h]\n"
+        "Cada nodo muestra: g (costo pagado) | h (estimacion) | f = g+h\n"
         "[naranja] expandiendo  [azul] frontera  [verde] explorado  [gris] no visto",
-        fontsize=11, fontweight='bold')
+        fontsize=10, fontweight='bold')
     axes = axes.flatten()
 
     legend_patches = [
@@ -1310,65 +1344,69 @@ def plot_dijkstra_step_by_step() -> None:
         mpatches.Patch(color=COLORS["green"], label="Explorado"),
         mpatches.Patch(color=COLORS["light"], label="No visitado"),
     ]
-    for ax, (cur, fr, ex, lbl, ttl, sp, nt) in zip(axes, steps):
-        _draw_toy_step(ax, cur, fr, ex, lbl, ttl, sp, nt)
+    for ax, (cur, fr, ex, ng, ttl, sp, nt) in zip(axes, steps):
+        _draw_toy_step(ax, cur, fr, ex, ng, ttl, sp, nt)
 
     fig.legend(handles=legend_patches, loc='lower center', ncol=4,
-               fontsize=9, framealpha=0.9, bbox_to_anchor=(0.5, -0.02))
+               fontsize=9, framealpha=0.9, bbox_to_anchor=(0.5, -0.01))
     fig.tight_layout()
     _save(fig, "12_dijkstra_step_by_step.png")
 
 
 def plot_astar_step_by_step() -> None:
-    """6-panel step-by-step trace of A* on the toy graph."""
+    """6-panel step-by-step trace of A* on the toy graph.
+    Shows g, h, and f at every node — A* uses f = g+h.
+    Key comparison with Dijkstra: same g values, but f directs focus.
+    B (f=8) is never expanded because f(B) > optimal cost.
+    """
     steps = [
-        # (current, frontier_set, explored_set, node_labels, title, solution_path, note)
+        # (current, frontier_set, explored_set, node_g, title, solution_path, note)
         (None,
          {'S'}, set(),
-         {'S': 'f=0+7=7'},
+         {'S': 0},
          "Inicio\nf(S) = g(S)+h(S) = 0+7 = 7",
          None, None),
 
         ('S',
          {'A', 'B'}, {'S'},
-         {'S': 'f=7', 'A': 'f=1+5=6', 'B': 'f=4+4=8'},
-         "Expande S (f=7)\nA: f=1+5=6,  B: f=4+4=8",
+         {'S': 0, 'A': 1, 'B': 4},
+         "Expande S  [f=7]\nA: f=1+5=6,  B: f=4+4=8",
          None, None),
 
         ('A',
          {'B', 'C', 'G'}, {'S', 'A'},
-         {'S': 'f=7', 'A': 'f=6', 'B': 'f=8', 'C': 'f=2+3=5', 'G': 'f=11+0=11'},
-         "Expande A (f=6) — menor f!\nC: f=2+3=5,  G: f=(1+10)+0=11",
+         {'S': 0, 'A': 1, 'B': 4, 'C': 2, 'G': 11},
+         "Expande A  [f=6, menor f!]\nC: f=2+3=5,  G: f=11+0=11",
          None, None),
 
         ('C',
          {'B', 'G'}, {'S', 'A', 'C'},
-         {'S': 'f=7', 'A': 'f=6', 'B': 'f=8', 'C': 'f=5', 'G': 'f=4+0=4'},
-         "Expande C (f=5)\nRelajacion: f[G]: 11 → (2+2)+0 = 4  !",
+         {'S': 0, 'A': 1, 'B': 4, 'C': 2, 'G': 4},
+         "Expande C  [f=5]\nRelajacion: f[G]: 11 -> (2+2)+0 = 4  !",
          None,
-         "f[G] se actualiza: 11 → 4  (g[G]=4, h[G]=0)"),
+         "f[G] se actualiza 11->4  (g[G]=4, h[G]=0)"),
 
         ('G',
          set(), {'S', 'A', 'C'},
-         {'S': 'f=7', 'A': 'f=6', 'B': 'f=8', 'C': 'f=5', 'G': 'f=4'},
-         "META: G (f=4)  —  camino optimo\nS→A→C→G  costo = 1+1+2 = 4",
+         {'S': 0, 'A': 1, 'B': 4, 'C': 2, 'G': 4},
+         "META: G  [f=4]  —  camino optimo\nS->A->C->G  costo = 1+1+2 = 4",
          ['S', 'A', 'C', 'G'], None),
 
-        # Panel 6: B nunca expandido — el beneficio de h(n)
         (None,
          {'B'}, {'S', 'A', 'C', 'G'},
-         {'S': 'f=7', 'A': 'f=6', 'B': 'f=8', 'C': 'f=5', 'G': 'f=4'},
-         "B quedo en frontera sin expandirse\nf(B)=8 > f*(G)=4",
+         {'S': 0, 'A': 1, 'B': 4, 'C': 2, 'G': 4},
+         "B quedo en frontera sin expandirse\nf(B)=8 > costo optimo=4",
          ['S', 'A', 'C', 'G'],
-         "A* nunca expande nodos con f > costo optimo\n"
-         "Dijkstra expande B porque ignora h  —  A* lo evita gracias a h(B)=4"),
+         "A* evita B: f(B)=8 > 4  —  Dijkstra lo expandio porque ignora h\n"
+         "g(B)=4 igual que g(G)=4, pero h(B)=4 revela que B no puede mejorar"),
     ]
 
-    fig, axes = plt.subplots(2, 3, figsize=(15, 9))
+    fig, axes = plt.subplots(2, 3, figsize=(15, 9.5))
     fig.suptitle(
-        "A* paso a paso  —  siempre expande el menor f(n) = g(n) + h(n)\n"
+        "A* paso a paso  —  prioridad = f(n) = g(n) + h(n)\n"
+        "Cada nodo muestra: g (costo pagado) | h (estimacion) | f = g+h\n"
         "[naranja] expandiendo  [azul] frontera  [verde] explorado  [gris] no visto",
-        fontsize=11, fontweight='bold')
+        fontsize=10, fontweight='bold')
     axes = axes.flatten()
 
     legend_patches = [
@@ -1377,11 +1415,11 @@ def plot_astar_step_by_step() -> None:
         mpatches.Patch(color=COLORS["green"], label="Explorado"),
         mpatches.Patch(color=COLORS["light"], label="No visitado"),
     ]
-    for ax, (cur, fr, ex, lbl, ttl, sp, nt) in zip(axes, steps):
-        _draw_toy_step(ax, cur, fr, ex, lbl, ttl, sp, nt)
+    for ax, (cur, fr, ex, ng, ttl, sp, nt) in zip(axes, steps):
+        _draw_toy_step(ax, cur, fr, ex, ng, ttl, sp, nt)
 
     fig.legend(handles=legend_patches, loc='lower center', ncol=4,
-               fontsize=9, framealpha=0.9, bbox_to_anchor=(0.5, -0.02))
+               fontsize=9, framealpha=0.9, bbox_to_anchor=(0.5, -0.01))
     fig.tight_layout()
     _save(fig, "13_astar_step_by_step.png")
 
