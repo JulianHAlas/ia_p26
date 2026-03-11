@@ -57,7 +57,7 @@ Elige **uno** de los siguientes:
 | Notebook | Tema | Herramientas | Colab |
 |---------|------|-------------|:-----:|
 | [03 — Rutas en ciudad](notebooks/aplicaciones/03_rutas.ipynb) | Grafo sintético de ciudad; comparar Dijkstra vs A\* en tiempo real | networkx, matplotlib | <a href="https://colab.research.google.com/github/sonder-art/ia_p26/blob/main/clase/14_busqueda_informada/notebooks/aplicaciones/03_rutas.ipynb" target="_blank"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> |
-| [04 — Puzzle de 8 piezas](notebooks/aplicaciones/04_puzzle_8.ipynb) | Resolver el puzzle con A\* e IDA\*; medir $b^*$ con diferentes heurísticas | numpy, matplotlib | <a href="https://colab.research.google.com/github/sonder-art/ia_p26/blob/main/clase/14_busqueda_informada/notebooks/aplicaciones/04_puzzle_8.ipynb" target="_blank"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> |
+| [04 — Puzzle de 8 piezas](notebooks/aplicaciones/04_puzzle_8.ipynb) | Resolver el puzzle con A\* e IDA\*; medir $b^{∗}$ con diferentes heurísticas | numpy, matplotlib | <a href="https://colab.research.google.com/github/sonder-art/ia_p26/blob/main/clase/14_busqueda_informada/notebooks/aplicaciones/04_puzzle_8.ipynb" target="_blank"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> |
 
 ---
 
@@ -70,7 +70,7 @@ Al terminar este módulo podrás:
 3. **Distinguir** Greedy, Dijkstra y A\* como instancias del algoritmo genérico con fronteras distintas
 4. **Implementar** A\* con lazy deletion usando `heapq` de Python
 5. **Diseñar** heurísticas admisibles usando la técnica del problema relajado
-6. **Comparar** heurísticas por dominancia y calcular el factor de ramificación efectivo $b^*$
+6. **Comparar** heurísticas por dominancia y calcular el factor de ramificación efectivo $b^{∗}$
 7. **Explicar** por qué IDA\* usa memoria lineal y cuándo preferirlo sobre A\*
 8. **Seleccionar** el algoritmo adecuado para un problema dado usando la tabla comparativa
 

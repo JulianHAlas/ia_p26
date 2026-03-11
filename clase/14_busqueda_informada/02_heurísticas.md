@@ -39,9 +39,9 @@ Ejemplos concretos:
 
 La propiedad más importante que debe cumplir $h(n)$:
 
-$$\boxed{h(n) \leq h^*(n) \quad \forall n}$$
+$$\boxed{h(n) \leq h^{∗}(n) \quad \forall n}$$
 
-donde $h^*(n)$ es el **costo real óptimo** desde $n$ hasta la meta.
+donde $h^{∗}(n)$ es el **costo real óptimo** desde $n$ hasta la meta.
 
 Una heurística **admisible** nunca exagera lo que falta. Es optimista — puede subestimar, pero no sobreestimar.
 
@@ -53,7 +53,7 @@ En una cuadrícula 4-conexa con paredes, el camino real desde $(r_n, c_n)$ hasta
 - Cada movimiento solo cambia una coordenada en ±1.
 - Las paredes solo pueden forzar **rodeos** (caminos más largos, nunca más cortos).
 
-Por tanto: $h_{\text{Manhattan}}(n) \leq h^*(n)$ siempre → **admisible**.
+Por tanto: $h_{\text{Manhattan}}(n) \leq h^{∗}(n)$ siempre → **admisible**.
 :::
 
 :::example{title="Heurística inadmisible — qué pasa"}
@@ -127,7 +127,7 @@ Heurística h (admisible: h ≤ h* en todo nodo):
   h(S) = 2,  h(A) = 0,  h(Meta) = 0
 ```
 
-**¿Es admisible?** Sí: $h(S)=2 \leq h^*(S)=2$, $h(A)=0 \leq h^*(A)=1$, $h(\text{Meta})=0$. Nunca sobreestima.
+**¿Es admisible?** Sí: $h(S)=2 \leq h^{∗}(S)=2$, $h(A)=0 \leq h^{∗}(A)=1$, $h(\text{Meta})=0$. Nunca sobreestima.
 
 **¿Es consistente?** Comprobamos la arista $S \to A$:
 
@@ -162,16 +162,16 @@ h(n) > h*(n) en algún n →  A* inadmisible: rápido pero puede
 
 ![Espectro de calidad de la heurística]({{ '/14_busqueda_informada/images/03_heuristic_spectrum.png' | url }})
 
-El problema: S y G están en la misma columna con una pared horizontal entre ellos. $h_{\text{Manhattan}}(S, G) = 17$, pero el camino real requiere rodear la pared: $h^*(S) = 35$ (más del doble). Cuatro heurísticas, misma solución óptima:
+El problema: S y G están en la misma columna con una pared horizontal entre ellos. $h_{\text{Manhattan}}(S, G) = 17$, pero el camino real requiere rodear la pared: $h^{∗}(S) = 35$ (más del doble). Cuatro heurísticas, misma solución óptima:
 
 | Heurística | Nodos expandidos | Forma visible |
 |---|:---:|---|
 | $h = 0$ (Dijkstra) | 452 | Inundación rectangular — sin dirección |
 | $h = \frac{h_M}{2}$ (débil) | 435 | Cruz ancha — ligero sesgo hacia abajo |
 | $h = h_M$ (Manhattan) | 284 | Columna hacia abajo + cruz en la pared |
-| $h = h^*$ (exacta) | 171 | Corredor en L — izquierda, abajo, derecha |
+| $h = h^{∗}$ (exacta) | 171 | Corredor en L — izquierda, abajo, derecha |
 
-**La clave**: Manhattan dice «baja recto 17 pasos» pero la pared lo obliga a desviarse. A\* con Manhattan sigue esa intuición equivocada hasta chocar. A\* con $h^*$ sabe desde el primer paso que debe ir izquierda.
+**La clave**: Manhattan dice «baja recto 17 pasos» pero la pared lo obliga a desviarse. A\* con Manhattan sigue esa intuición equivocada hasta chocar. A\* con $h^{∗}$ sabe desde el primer paso que debe ir izquierda.
 
 ---
 
@@ -214,7 +214,7 @@ Como en el módulo anterior, usamos:
 | $m$ | Profundidad máxima del grafo | Puede ser $\gg d$ |
 
 Para A\* añadimos:
-- $b^*$ — **factor de ramificación efectivo**: si A\* expande $N$ nodos encontrando solución a profundidad $d$, entonces $b^* \approx N^{1/d}$. Un buen indicador de la calidad de $h$: $b^* = 1$ es perfecto, $b^* = b$ es Dijkstra.
+- $b^{∗}$ — **factor de ramificación efectivo**: si A\* expande $N$ nodos encontrando solución a profundidad $d$, entonces $b^{∗} \approx N^{1/d}$. Un buen indicador de la calidad de $h$: $b^{∗} = 1$ es perfecto, $b^{∗} = b$ es Dijkstra.
 
 ---
 

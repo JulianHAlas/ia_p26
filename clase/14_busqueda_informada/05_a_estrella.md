@@ -32,7 +32,7 @@ La pregunta que A\* responde en cada paso es: *\"¿qué nodo tiene la mejor esti
 
 $$f(n) = \underbrace{g(n)}_{\text{costo ya pagado}} + \underbrace{h(n)}_{\text{costo estimado restante}}$$
 
-Si $h$ es perfecta ($h(n) = h^*(n)$ para todo $n$), A\* solo expande los nodos del camino óptimo. En la práctica, $h$ es una subestimación admisible, y A\* expande solo aquellos nodos que *podrían* estar en el camino óptimo — una búsqueda enfocada y exacta.
+Si $h$ es perfecta ($h(n) = h^{∗}(n)$ para todo $n$), A\* solo expande los nodos del camino óptimo. En la práctica, $h$ es una subestimación admisible, y A\* expande solo aquellos nodos que *podrían* estar en el camino óptimo — una búsqueda enfocada y exacta.
 
 La imagen mental: A\* es como un explorador con mapa parcial. Sabe cuánto ha caminado ($g$) y puede estimar cuánto falta ($h$). Siempre elige la ruta que parece tener el menor costo total, no solo la que parece más cercana a la meta ni la más barata hasta ahora.
 
@@ -82,11 +82,11 @@ function A_STAR(problema, h):
 
 ## 3. Admisibilidad → optimalidad
 
-Si $h$ es **admisible** ($h(n) \leq h^*(n)$ para todo $n$), entonces A\* encuentra el camino óptimo.
+Si $h$ es **admisible** ($h(n) \leq h^{∗}(n)$ para todo $n$), entonces A\* encuentra el camino óptimo.
 
-**Demostración informal por contradicción**: supón que A\* devuelve un camino subóptimo con costo $C > C^*$ (donde $C^*$ es el costo óptimo). En el momento en que se expandió el nodo meta por ese camino caro, debe existir un nodo $n$ en la frontera que esté en el camino óptimo y aún no haya sido expandido. Su valor $f(n)$ satisface:
+**Demostración informal por contradicción**: supón que A\* devuelve un camino subóptimo con costo $C > C^{∗}$ (donde $C^{∗}$ es el costo óptimo). En el momento en que se expandió el nodo meta por ese camino caro, debe existir un nodo $n$ en la frontera que esté en el camino óptimo y aún no haya sido expandido. Su valor $f(n)$ satisface:
 
-$$f(n) = g(n) + h(n) \leq g(n) + h^*(n) = C^* < C$$
+$$f(n) = g(n) + h(n) \leq g(n) + h^{∗}(n) = C^{∗} < C$$
 
 Entonces $f(n) < C$ — el nodo $n$ debería haberse sacado de la cola antes que la meta subóptima. Contradicción.
 
@@ -134,7 +134,7 @@ h(n) = Manhattan a G=(3,4):
 
 Camino: `S → A → C → G` con costo **4** — óptimo, en solo **4 expansiones**.
 
-**B nunca fue expandido.** $f(B)=8 > f^*(G)=4$: A\* sabe que B no puede llevar a nada mejor que lo que ya encontró. El panel 6 de la imagen lo muestra — B quedó en la frontera al terminar.
+**B nunca fue expandido.** $f(B)=8 > f^{∗}(G)=4$: A\* sabe que B no puede llevar a nada mejor que lo que ya encontró. El panel 6 de la imagen lo muestra — B quedó en la frontera al terminar.
 
 | Algoritmo | Expansiones | Camino | Costo | ¿Óptimo? |
 |---|:---:|---|:---:|:---:|
@@ -152,8 +152,8 @@ A\* iguala la velocidad de Greedy **y** la optimalidad de Dijkstra — gracias a
 |---|---|---|:---:|
 | $h = 0$ | $g(n)$ | Dijkstra: expande en todas direcciones | Máximo |
 | $h$ = buena estimación admisible | $g + h$ | A\*: enfocado | Mucho menos |
-| $h = h^*$ exacta | $g + h^*$ | A\* perfecto: solo el camino óptimo | Mínimo |
-| $h > h^*$ (inadmisible) | $g + h_{\text{malo}}$ | Rápido pero puede ser subóptimo | Variable |
+| $h = h^{∗}$ exacta | $g + h^{∗}$ | A\* perfecto: solo el camino óptimo | Mínimo |
+| $h > h^{∗}$ (inadmisible) | $g + h_{\text{malo}}$ | Rápido pero puede ser subóptimo | Variable |
 
 ![Comparación de tres algoritmos en el mismo problema]({{ '/14_busqueda_informada/images/07_three_way_comparison.png' | url }})
 
@@ -161,18 +161,18 @@ El panel muestra el mismo laberinto con obstáculos resuelto por Greedy, Dijkstr
 
 ---
 
-## 7. Factor de ramificación efectivo $b^*$
+## 7. Factor de ramificación efectivo $b^{∗}$
 
-El **factor de ramificación efectivo** $b^*$ mide empíricamente la calidad de una heurística. Si A\* expande $N$ nodos para encontrar una solución a profundidad $d$:
+El **factor de ramificación efectivo** $b^{∗}$ mide empíricamente la calidad de una heurística. Si A\* expande $N$ nodos para encontrar una solución a profundidad $d$:
 
-$$b^* = N^{1/d}$$
+$$b^{∗} = N^{1/d}$$
 
 Un buen indicador:
-- $b^* = 1$: la heurística es perfecta — A\* solo expande el camino óptimo.
-- $b^* = b$: la heurística aporta cero información — A\* se comporta como Dijkstra.
-- $b^* \approx 1.5$ para el puzzle de 8 piezas con heurística Manhattan — excelente.
+- $b^{∗} = 1$: la heurística es perfecta — A\* solo expande el camino óptimo.
+- $b^{∗} = b$: la heurística aporta cero información — A\* se comporta como Dijkstra.
+- $b^{∗} \approx 1.5$ para el puzzle de 8 piezas con heurística Manhattan — excelente.
 
-Esta métrica permite comparar heurísticas para el mismo problema: la que produce menor $b^*$ en promedio es mejor.
+Esta métrica permite comparar heurísticas para el mismo problema: la que produce menor $b^{∗}$ en promedio es mejor.
 
 ---
 
@@ -242,10 +242,10 @@ def a_star(problema, h):
 
 En el **peor caso** con $h = 0$: $O((V + E) \log V)$ — igual que Dijkstra.
 
-En el **caso promedio** con heurística buena: exponencialmente mejor. El número de nodos expandidos depende del **error de la heurística** $\epsilon = h^*(n) - h(n)$:
+En el **caso promedio** con heurística buena: exponencialmente mejor. El número de nodos expandidos depende del **error de la heurística** $\epsilon = h^{∗}(n) - h(n)$:
 
-- Si $\epsilon = O(\log h^*)$: A\* expande en tiempo polinomial.
-- Si $h = h^*$: A\* expande solo los nodos del camino óptimo — $O(d)$.
+- Si $\epsilon = O(\log h^{∗})$: A\* expande en tiempo polinomial.
+- Si $h = h^{∗}$: A\* expande solo los nodos del camino óptimo — $O(d)$.
 
 ### Espacio
 

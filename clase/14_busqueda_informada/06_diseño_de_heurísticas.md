@@ -25,7 +25,7 @@ La forma más rigurosa de construir heurísticas admisibles es el **método del 
 
 El resultado es automáticamente admisible porque:
 
-$$h_{\text{relajado}}(n) = h^*_{\text{relajado}}(n) \leq h^*(n)$$
+$$h_{\text{relajado}}(n) = h^{∗}_{\text{relajado}}(n) \leq h^{∗}(n)$$
 
 Al relajar restricciones, el costo óptimo en el problema relajado nunca puede ser mayor que en el original — hay más caminos disponibles en el relajado.
 
@@ -39,7 +39,7 @@ El puzzle de 8 piezas es un tablero de 3×3 con fichas numeradas 1-8 y un espaci
 
 **Relajación 1**: eliminar restricción (1) — las fichas pueden moverse a cualquier posición adyacente, no solo al espacio.
 
-→ En el problema relajado, el costo mínimo para llevar cada ficha a su lugar es exactamente 1 si ya está adyacente a su destino, o más si no. La suma de movimientos mínimos de cada ficha es la **distancia Manhattan** (suma de distancias en fila y columna). Resultado: $h_{\text{Manhattan}}(n) = \sum_i |r_i - r_i^*| + |c_i - c_i^*|$
+→ En el problema relajado, el costo mínimo para llevar cada ficha a su lugar es exactamente 1 si ya está adyacente a su destino, o más si no. La suma de movimientos mínimos de cada ficha es la **distancia Manhattan** (suma de distancias en fila y columna). Resultado: $h_{\text{Manhattan}}(n) = \sum_i |r_i - r_i^{∗}| + |c_i - c_i^{∗}|$
 
 **Relajación 2**: eliminar restricciones (1) y (2) — cada ficha puede teletransportarse a su posición final en un paso.
 
@@ -71,7 +71,7 @@ Fichas fuera de lugar: 7, 4, 5, 6, 8, 3, 1 → h1 = 7
 
 ### Heurística 2: distancia Manhattan
 
-$$h_2(n) = \sum_{i=1}^{8} \left( |r_i - r_i^*| + |c_i - c_i^*| \right)$$
+$$h_2(n) = \sum_{i=1}^{8} \left( |r_i - r_i^{∗}| + |c_i - c_i^{∗}| \right)$$
 
 ```
 Estado actual:     Estado meta:
@@ -205,7 +205,7 @@ Para cualquier problema nuevo, sigue estos pasos:
 3. **Calcula el costo óptimo en el problema relajado** — esa es tu heurística.
 4. **Verifica admisibilidad**: ¿el costo del problema relajado es siempre ≤ costo del original?
 5. **Compara con otras heurísticas**: usa el truco del máximo o elige la dominante.
-6. **Mide** el factor de ramificación efectivo $b^*$ en instancias representativas.
+6. **Mide** el factor de ramificación efectivo $b^{∗}$ en instancias representativas.
 
 :::example{title="Diseño de heurística: problema del viajante (TSP)"}
 Problema: visitar $n$ ciudades con costo mínimo.
@@ -225,7 +225,7 @@ Esta heurística hace que A\* sea competitivo en instancias medianas de TSP.
 
 | Propiedad / Técnica | Descripción | Garantía |
 |---|---|---|
-| **Admisibilidad** $h \leq h^*$ | Nunca sobreestima | A\* es óptimo |
+| **Admisibilidad** $h \leq h^{∗}$ | Nunca sobreestima | A\* es óptimo |
 | **Consistencia** $h(n) \leq c + h(n')$ | Desigualdad triangular | No reapertura de nodos |
 | **Problema relajado** | Eliminar restricciones | Heurística admisible automática |
 | **Dominancia** $h_a \geq h_b$ | Siempre preferir $h_a$ | Nunca más expansiones |

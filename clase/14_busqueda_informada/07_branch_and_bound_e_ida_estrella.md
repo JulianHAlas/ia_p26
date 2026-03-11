@@ -28,7 +28,7 @@ Este módulo presenta dos ideas que resuelven ese problema:
 
 **Branch & Bound** (B&B) es una estrategia meta-algorítmica, no un algoritmo específico. La idea central:
 
-> Mantén una cota superior `mejor_encontrado` del costo óptimo. Al explorar un nodo $n$, calcula una cota inferior $f(n)$ de cualquier solución que pase por $n$. Si $f(n) \geq \text{mejor\_encontrado}$, **poda** — no tiene sentido explorar esa rama.
+> Mantén una cota superior `mejor_encontrado` del costo óptimo. Al explorar un nodo $n$, calcula una cota inferior $f(n)$ de cualquier solución que pase por $n$. Si $f(n) \geq$ `mejor_encontrado`, **poda** — no tiene sentido explorar esa rama.
 
 ```
 Árbol de búsqueda con B&B:

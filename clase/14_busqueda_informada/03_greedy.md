@@ -237,7 +237,7 @@ def greedy(problema, h):
 
 En el **peor caso**: $O(b^m)$ — igual que DFS. Si la heurística guía mal (o el problema tiene muchos callejones sin salida con bajo $h$), Greedy puede explorar todo el grafo.
 
-En el **mejor caso** (heurística perfecta, $h = h^*$): $O(d)$ — expande solo los nodos del camino óptimo.
+En el **mejor caso** (heurística perfecta, $h = h^{∗}$): $O(d)$ — expande solo los nodos del camino óptimo.
 
 La diferencia entre estos extremos puede ser enorme. El comportamiento real depende completamente de la calidad de $h$.
 
@@ -256,7 +256,7 @@ $O(b^m)$ en el peor caso — igual que BFS. La frontera puede llenarse con todos
 | Señal del problema | ¿Por qué favorece Greedy? |
 |---|---|
 | **La velocidad importa más que la optimalidad** | Greedy no rastrea $g$ ni actualiza costos → más rápido |
-| **Tienes una heurística muy buena** | Si $h \approx h^*$, Greedy va casi directamente a la meta |
+| **Tienes una heurística muy buena** | Si $h \approx h^{∗}$, Greedy va casi directamente a la meta |
 | **El problema es de "buena-suficiente" solución** | NPC en videojuegos, prototipado rápido |
 | **El espacio de estados es enorme** | Greedy explora menos que Dijkstra en casos favorables |
 
