@@ -107,7 +107,7 @@ Con esta interfaz, la tabla de algoritmos es:
 | Cola de prioridad (por costo) | El *más barato* primero | Costo uniforme / Dijkstra |
 | Cola de prioridad ($g + h$) | El *más prometedor* primero | **A*** |
 
-Los tres últimos los veremos en módulos posteriores. Por ahora nos concentramos en los dos primeros.
+Los tres últimos los estudiamos en [Módulo 14 — Búsqueda Informada →](../14_busqueda_informada/00_index.md). Por ahora nos concentramos en los dos primeros.
 
 ---
 
