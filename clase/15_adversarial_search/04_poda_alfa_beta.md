@@ -4,7 +4,7 @@ title: "Poda alfa-beta"
 
 | Notebook | Colab |
 |---------|:-----:|
-| Notebook 02 — Minimax y alpha-beta | <a href="COLAB_URL" target="_blank"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> |
+| Notebook 02 — Minimax y alpha-beta | <a href="https://colab.research.google.com/github/sonder-art/ia_p26/blob/main/clase/15_adversarial_search/notebooks/02_minimax_y_alphabeta.ipynb" target="_blank"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> |
 
 ---
 
@@ -86,62 +86,74 @@ Los valores $\alpha$ y $\beta$ se pasan hacia abajo en cada llamada recursiva, a
 Los cambios respecto a minimax son exactamente **tres líneas** — marcadas con `[P1]`, `[P2]`, `[P3]`.
 
 ```
+# ── ALPHA_BETA ───────────────────────────────────────────────────────────────
+# Punto de entrada. Igual que MINIMAX, pero pasa α y β hacia abajo.
+# α y β empiezan en −∞ y +∞: todavía no sabemos nada del árbol.
+
 function ALPHA_BETA(juego, estado):
 
-    # ── Punto de entrada ─────────────────────────────────────────────────────
     if juego.jugador(estado) == MAX:
-        v, accion ← MAX_VALUE_AB(juego, estado, -∞, +∞)  # [P1] α=-∞, β=+∞ iniciales
+        v, accion ← MAX_VALUE_AB(juego, estado, -∞, +∞)  # [P1] valores iniciales: sin información aún
     else:
-        v, accion ← MIN_VALUE_AB(juego, estado, -∞, +∞)
-    return accion
+        v, accion ← MIN_VALUE_AB(juego, estado, -∞, +∞)  # [P1] ídem para MIN
+    return accion                    # devolvemos la ACCIÓN, igual que minimax
 
+
+# ── MAX_VALUE_AB ─────────────────────────────────────────────────────────────
+# Igual que MAX_VALUE en minimax, pero con dos diferencias:
+#   - Actualiza α después de cada hijo explorado.
+#   - Para antes de ver todos los hijos si ya no tiene sentido seguir (v ≥ β).
 
 function MAX_VALUE_AB(juego, estado, α, β):
 
-    # ── Caso base ────────────────────────────────────────────────────────────
-    if juego.terminal(estado):
-        return juego.utilidad(estado), None
+    if juego.terminal(estado):           # ¿El juego terminó aquí?
+        return juego.utilidad(estado), None   # hoja: valor conocido, sin acción
 
-    # ── Bucle con poda ───────────────────────────────────────────────────────
-    v ← -∞
-    mejor ← None
-    for each accion in juego.acciones(estado):
-        sucesor ← juego.resultado(estado, accion)
-        v2, _ ← MIN_VALUE_AB(juego, sucesor, α, β)
-        if v2 > v:
-            v ← v2
-            mejor ← accion
-        α ← max(α, v)                           # [P2] actualizar α
-        if v ≥ β:                                # [P3] poda β
-            return v, mejor                      #      MIN no vendría aquí
-    return v, mejor
+    v ← -∞                              # peor valor posible para MAX
+    mejor ← None                        # todavía no hay mejor acción
+    for each accion in juego.acciones(estado):       # recorre cada movimiento legal
+        sucesor ← juego.resultado(estado, accion)    # aplica el movimiento → estado hijo
+        v2, _ ← MIN_VALUE_AB(juego, sucesor, α, β)  # evalúa ese hijo en el nivel MIN
+        if v2 > v:                       # ¿es este hijo mejor que el mejor visto hasta ahora?
+            v ← v2                       # sí: actualiza el mejor valor
+            mejor ← accion              # guarda la acción que lo produjo
+        α ← max(α, v)                   # [P2] actualiza α: MAX ahora garantiza al menos v
+        if v ≥ β:                        # [P3] poda β: MAX puede forzar v ≥ β,
+            return v, mejor             #      pero MIN ya tiene una opción ≤ β en otra rama
+                                        #      → MIN nunca elegiría venir aquí → podamos
+    return v, mejor                      # propaga el mejor valor encontrado
 
+
+# ── MIN_VALUE_AB ─────────────────────────────────────────────────────────────
+# Igual que MIN_VALUE en minimax, pero actualiza β y poda si v ≤ α.
 
 function MIN_VALUE_AB(juego, estado, α, β):
 
-    # ── Caso base ────────────────────────────────────────────────────────────
-    if juego.terminal(estado):
-        return juego.utilidad(estado), None
+    if juego.terminal(estado):           # ¿El juego terminó aquí?
+        return juego.utilidad(estado), None   # hoja: valor conocido, sin acción
 
-    # ── Bucle con poda ───────────────────────────────────────────────────────
-    v ← +∞
+    v ← +∞                              # peor valor posible para MIN (el más alto)
     mejor ← None
-    for each accion in juego.acciones(estado):
-        sucesor ← juego.resultado(estado, accion)
-        v2, _ ← MAX_VALUE_AB(juego, sucesor, α, β)
-        if v2 < v:
-            v ← v2
+    for each accion in juego.acciones(estado):       # recorre cada movimiento legal
+        sucesor ← juego.resultado(estado, accion)    # aplica el movimiento → estado hijo
+        v2, _ ← MAX_VALUE_AB(juego, sucesor, α, β)  # evalúa ese hijo en el nivel MAX
+        if v2 < v:                       # ¿es este hijo peor para MAX (= mejor para MIN)?
+            v ← v2                       # sí: actualiza el mejor valor para MIN
             mejor ← accion
-        β ← min(β, v)                           # [P2] actualizar β
-        if v ≤ α:                                # [P3] poda α
-            return v, mejor                      #      MAX no vendría aquí
+        β ← min(β, v)                   # [P2] actualiza β: MIN ahora garantiza a lo sumo v
+        if v ≤ α:                        # [P3] poda α: MIN puede forzar v ≤ α,
+            return v, mejor             #      pero MAX ya tiene una opción ≥ α en otra rama
+                                        #      → MAX nunca elegiría venir aquí → podamos
     return v, mejor
 ```
 
-La estructura del algoritmo es idéntica a minimax. Los únicos cambios son:
-- `[P1]`: pasar $\alpha = -\infty$, $\beta = +\infty$ al inicio.
-- `[P2]`: actualizar $\alpha$ (en MAX) o $\beta$ (en MIN) con el mejor valor encontrado.
-- `[P3]`: si $v \geq \beta$ (en MAX) o $v \leq \alpha$ (en MIN), retornar antes de terminar el bucle.
+**Resumen de los tres cambios sobre minimax:**
+
+| Cambio | Dónde | Qué hace |
+|---|---|---|
+| `[P1]` | Punto de entrada | Pasa $\alpha=-\infty$, $\beta=+\infty$ — sin información inicial |
+| `[P2]` | Dentro del bucle | Actualiza $\alpha$ (MAX) o $\beta$ (MIN) con el mejor valor encontrado hasta ahora |
+| `[P3]` | Dentro del bucle | Si la ventana $[\alpha, \beta]$ se cierra, para — el resto de la rama no puede cambiar la decisión |
 
 ---
 
@@ -153,46 +165,55 @@ def alpha_beta(estado, es_max, alpha=-float('inf'), beta=float('inf')):
     Alpha-beta para Nim.
 
     Args:
-        estado : tupla de enteros (tamaños de pilas)
+        estado : tupla de enteros — tamaño de cada pila, e.g. (2, 3)
         es_max : True si es turno de MAX, False si es turno de MIN
-        alpha  : mejor valor que MAX puede garantizarse en el camino actual
-        beta   : mejor valor que MIN puede garantizarse en el camino actual
+        alpha  : mejor valor que MAX puede garantizarse en el camino desde la raíz hasta aquí
+        beta   : mejor valor que MIN puede garantizarse en el camino desde la raíz hasta aquí
 
     Returns:
-        (valor, accion) donde accion = (pile_idx, amount) o None si terminal
+        (valor, accion)  →  valor ∈ {+1, −1},  accion = (indice_pila, cantidad) o None
     """
-    # Caso base: estado terminal
+    # ── Caso base: estado terminal ───────────────────────────────────────────
+    # Todas las pilas vacías: el jugador en turno no puede mover → pierde
     if all(p == 0 for p in estado):
-        return (-1 if es_max else +1), None
+        return (-1 if es_max else +1), None   # MAX pierde si es su turno, MIN pierde si es el suyo
 
+    # ── Inicialización ───────────────────────────────────────────────────────
+    # MAX empieza queriendo el mayor valor posible → inicia en −∞
+    # MIN empieza queriendo el menor valor posible → inicia en +∞
     mejor_valor = -float('inf') if es_max else float('inf')
     mejor_accion = None
 
-    for i, pila in enumerate(estado):
-        for cant in range(1, pila + 1):
+    # ── Exploración de sucesores ─────────────────────────────────────────────
+    for i, pila in enumerate(estado):           # i = índice de la pila
+        for cant in range(1, pila + 1):         # cant ∈ {1, …, tamaño_pila}
             nuevo = list(estado)
-            nuevo[i] -= cant
+            nuevo[i] -= cant                    # aplica el movimiento: retira 'cant' de pila i
+            # Llamada recursiva: el turno alterna, α y β bajan iguales
             v, _ = alpha_beta(tuple(nuevo), not es_max, alpha, beta)
 
             if es_max:
-                if v > mejor_valor:
+                # ── Nodo MAX ─────────────────────────────────────────────────
+                if v > mejor_valor:             # ¿este hijo es mejor para MAX?
                     mejor_valor = v
                     mejor_accion = (i, cant)
-                alpha = max(alpha, mejor_valor)
-                if mejor_valor >= beta:          # poda β
-                    return mejor_valor, mejor_accion
+                alpha = max(alpha, mejor_valor) # MAX ahora garantiza al menos mejor_valor
+                if mejor_valor >= beta:         # poda β: MAX puede forzar ≥ β,
+                    return mejor_valor, mejor_accion   # pero MIN nunca vendría aquí
             else:
-                if v < mejor_valor:
+                # ── Nodo MIN ─────────────────────────────────────────────────
+                if v < mejor_valor:             # ¿este hijo es peor para MAX (= mejor para MIN)?
                     mejor_valor = v
                     mejor_accion = (i, cant)
-                beta = min(beta, mejor_valor)
-                if mejor_valor <= alpha:         # poda α
-                    return mejor_valor, mejor_accion
+                beta = min(beta, mejor_valor)   # MIN ahora garantiza a lo sumo mejor_valor
+                if mejor_valor <= alpha:        # poda α: MIN puede forzar ≤ α,
+                    return mejor_valor, mejor_accion   # pero MAX nunca vendría aquí
 
     return mejor_valor, mejor_accion
 
 
-# Verificación: alpha-beta da la misma respuesta que minimax
+# ── Verificación: alpha-beta == minimax ──────────────────────────────────────
+# La acción elegida debe ser idéntica — solo cambia cuántos nodos se visitaron
 if __name__ == '__main__':
     estado = (1, 2)
     v_mm, a_mm = minimax(estado, es_max=True)
@@ -209,13 +230,26 @@ if __name__ == '__main__':
 
 ## 7. Traza: Nim(2,3) con poda
 
-Para mostrar la poda de forma más visible, usamos Nim(2,3) — el árbol tiene más ramas desde la raíz, proporcionando más oportunidades de poda. La decisión final es la misma que daría minimax, pero alpha-beta abandona varias ramas antes de explorarlas completamente.
+Para mostrar la poda de forma más visible usamos **Nim(2,3)**: pila A = 2 fichas, pila B = 3 fichas. El árbol es más grande que Nim(1,2) — hay más ramas desde la raíz — y por eso alpha-beta tiene más oportunidades de podar.
+
+La decisión final es **idéntica** a minimax. La diferencia es que alpha-beta abandona varias ramas antes de terminar de explorarlas.
+
+### Lectura de la figura
 
 ![Alpha-beta en Nim(2,3)]({{ '/15_adversarial_search/images/08_alphabeta_nim23.png' | url }})
 
-La figura muestra el árbol de Nim(2,3) con las ramas podadas marcadas en gris. Los valores $\alpha$ y $\beta$ se actualizan a medida que sube la información de las hojas.
+**Cómo leer esta figura:**
 
-Traza parcial mostrando el momento de la primera poda:
+- **Nodos azules**: turno de MAX (maximiza). **Nodos rojos**: turno de MIN (minimiza). Los colores alternan nivel a nivel, igual que en Nim(1,2).
+- **Cada arista** es un movimiento legal, etiquetada con la acción (p.ej. `A-1` = retirar 1 de pila A, `B-2` = retirar 2 de pila B).
+- **El par ($\alpha$, $\beta$)** anotado junto a cada nodo muestra los valores en el momento en que ese nodo se evalúa. $\alpha$ es el mejor que MAX ya sabe garantizarse en el camino desde la raíz; $\beta$ es el mejor que MIN ya sabe garantizarse. Ambos valores bajan del padre al hijo — la información se *hereda hacia abajo*.
+- **Ramas en gris con ✗**: ramas podadas. Esos nodos nunca se expanden. Alpha-beta decidió que explorarlos no puede cambiar la decisión en el ancestro.
+- **Nodos terminales** (cuadrados): estado (0,0). Valor +1 si le toca a MIN en ese terminal (MIN pierde), −1 si le toca a MAX (MAX pierde). Igual que en Nim(1,2).
+- **Nodo raíz (2,3)**: su valor final (+1) es el mismo que obtendría minimax. MAX elige la misma acción óptima — con menos trabajo.
+
+**Qué significa una poda concretamente**: cuando una rama se poda, significa que aunque exploráramos todos sus hijos, el resultado no podría mejorar la decisión del ancestro. Alguien en el camino hacia la raíz ya tiene una opción mejor garantizada — ese "alguien" nunca elegiría esta rama.
+
+### Traza parcial — el momento de la primera poda
 
 | # | Estado | Jugador | $\alpha$ | $\beta$ | Retorna | Nota |
 |:--:|:---:|:---:|:---:|:---:|---|---|
@@ -241,7 +275,7 @@ Traza parcial mostrando el momento de la primera poda:
 
 ![Minimax vs alpha-beta]({{ '/15_adversarial_search/images/09_alphabeta_vs_minimax.png' | url }})
 
-La figura compara el número de nodos expandidos por minimax y alpha-beta en el mismo árbol de Nim(2,3). Alpha-beta produce la misma decisión final con menos trabajo.
+La figura compara el número de nodos expandidos por minimax y alpha-beta en el mismo árbol de Nim(2,3). Cada barra representa un juego distinto — el eje horizontal es el juego, el eje vertical es cuántos nodos se visitaron. La barra azul es minimax (visita todos los nodos); la barra naranja es alpha-beta (visita un subconjunto). En ambos casos, la **acción elegida es idéntica** — la reducción es solo en trabajo, no en calidad.
 
 ---
 
