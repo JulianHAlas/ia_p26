@@ -50,21 +50,33 @@ Si en algún momento $\alpha \geq \beta$, sabemos que este nodo no puede influir
 
 ## 3. Condición de poda
 
-```
-Nodo MAX: si encontramos un hijo con valor v ≥ β → PODA (β-cutoff)
-    ↑
-    MIN ya tiene garantía ≤ β en otra parte del árbol.
-    MAX puede forzar ≥ v ≥ β aquí.
-    MIN nunca vendría a este subárbol — podamos el resto.
+La poda ocurre cuando la **ventana** $[\alpha, \beta]$ se cierra, es decir, cuando el valor que el nodo actual puede forzar ya queda fuera del rango que le interesa al ancestro.
 
-Nodo MIN: si encontramos un hijo con valor v ≤ α → PODA (α-cutoff)
-    ↑
-    MAX ya tiene garantía ≥ α en otra parte del árbol.
-    MIN puede forzar ≤ v ≤ α aquí.
-    MAX nunca vendría a este subárbol — podamos el resto.
+**Poda en nodo MAX** (β-cutoff): MAX encontró un hijo con valor $v \geq \beta$
+
+```
+Situación:
+  - β es el mejor resultado que MIN puede garantizarse en otra rama.
+  - MAX ahora puede forzar ≥ v ≥ β en esta rama.
+  - MIN nunca elegiría venir a este subárbol porque ya tiene algo mejor (≤ β) en otro lado.
+  → Podamos: no importa lo que quede por explorar aquí.
+
+Condición: v ≥ β  →  PODA (β-cutoff)  →  return v inmediatamente
 ```
 
-Regla nemotécnica: **MAX poda cuando encontró algo demasiado bueno para que MIN lo permita** ($v \geq \beta$); **MIN poda cuando encontró algo demasiado malo para que MAX lo elija** ($v \leq \alpha$).
+**Poda en nodo MIN** (α-cutoff): MIN encontró un hijo con valor $v \leq \alpha$
+
+```
+Situación:
+  - α es el mejor resultado que MAX puede garantizarse en otra rama.
+  - MIN ahora puede forzar ≤ v ≤ α en esta rama.
+  - MAX nunca elegiría venir a este subárbol porque ya tiene algo mejor (≥ α) en otro lado.
+  → Podamos: no importa lo que quede por explorar aquí.
+
+Condición: v ≤ α  →  PODA (α-cutoff)  →  return v inmediatamente
+```
+
+Regla nemotécnica: **MAX poda cuando encontró algo tan bueno que MIN jamás lo permitiría** ($v \geq \beta$); **MIN poda cuando encontró algo tan malo para MAX que MAX jamás lo elegiría** ($v \leq \alpha$).
 
 ---
 
@@ -83,7 +95,12 @@ Los valores $\alpha$ y $\beta$ se pasan hacia abajo en cada llamada recursiva, a
 
 ## 5. Pseudocódigo
 
-Los cambios respecto a minimax son exactamente **tres líneas** — marcadas con `[P1]`, `[P2]`, `[P3]`.
+La estructura es **idéntica** a minimax (mismas tres funciones: `ALPHA_BETA`, `MAX_VALUE_AB`, `MIN_VALUE_AB`). La única diferencia es que ahora cada llamada recibe y actualiza dos parámetros extra: $\alpha$ y $\beta$.
+
+Los cambios respecto a minimax son exactamente **tres líneas** — marcadas con `[P1]`, `[P2]`, `[P3]`:
+- `[P1]` — se pasan $\alpha$ y $\beta$ en la llamada inicial (antes no existían estos parámetros).
+- `[P2]` — dentro del bucle se actualiza $\alpha$ o $\beta$ con el mejor valor visto hasta ahora.
+- `[P3]` — si la ventana $[\alpha, \beta]$ se cerró, se retorna antes de terminar el bucle (la poda).
 
 ```
 # ── ALPHA_BETA ───────────────────────────────────────────────────────────────

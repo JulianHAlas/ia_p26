@@ -85,6 +85,14 @@ La recursión es bien fundada porque cada llamada opera sobre un estado estricta
 
 ## 5. Pseudocódigo
 
+El algoritmo se divide en tres funciones:
+
+- **`MINIMAX`** — punto de entrada. Decide si llama a MAX o MIN y devuelve la **acción** a tomar (no el valor numérico).
+- **`MAX_VALUE`** — se llama cuando es el turno de MAX. Devuelve el mayor valor posible entre todos los sucesores.
+- **`MIN_VALUE`** — se llama cuando es el turno de MIN. Devuelve el menor valor posible entre todos los sucesores.
+
+`MAX_VALUE` y `MIN_VALUE` se llaman mutuamente de forma recursiva, alternando el turno en cada nivel del árbol. La recursión termina cuando se llega a un estado terminal (hoja).
+
 ```
 # ── MINIMAX ─────────────────────────────────────────────────────────────────
 # Punto de entrada: recibe el juego y el estado actual.
